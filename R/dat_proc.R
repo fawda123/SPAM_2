@@ -100,6 +100,7 @@ for(fl in fls){
 dat <- do.call('rbind', dat)
 row.names(dat) <- 1:nrow(dat)
 
+# standardize time step by station
 dat2 <- split(dat, dat$Station)
 dat2 <- lapply(dat2, setstep, date_col = 'TimeStamp', timestep = 30) 
 dat2 <- do.call('rbind', dat2)
@@ -116,3 +117,33 @@ ggplot(dat2, aes(x = TimeStamp, y = PAR)) +
   facet_grid(~ Station, scales = 'free_y') + 
   theme_bw()
 
+######
+# ADCP
+fls <- list.files('ignore/', 'LOG', full.names = TRUE)
+
+# get all
+dat <- vector('list', length(fls))
+names(dat) <- fls
+for(fl in fls){
+  
+  cat(fl, '\n')
+  
+  # import
+  tmp <- read_excel(fl, sheet = 'LOG8')
+  
+  dat[[fl]] <- tmp
+  
+}
+
+dat <- do.call('rbind', dat)
+row.names(dat) <- 1:nrow(dat)
+
+# datetimestamp, select relevant cols
+datetimestamp <- with(dat, paste(paste(year, month, day, sep = '-'), paste(hour, minute, sec, sep = ':')))
+dat$datetimestamp <- as.POSIXct(datetimestamp, format = '%y-%m-%d %H:%M:%S', tz = 'America/Regina')
+dat <- dat[order(dat$datetimestamp), ]
+tosel <- c('datetimestamp', 'Dir', 'Mag', 'Depth')
+dat <- dat[, grepl(paste(tosel, collapse = '|'), names(dat))]
+
+adcp_dat <- dat
+save(adcp_dat, file = 'data/adcp_dat.RData')
