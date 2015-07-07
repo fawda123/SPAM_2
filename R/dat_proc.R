@@ -61,5 +61,58 @@ names(dat) <- c('stat', 'temp', 'pres', 'sal', 'do_mgl', 'turb', 'chla', 'cdom',
 ######
 # PAR
 
+fls <- list.files('ignore/', '^PAR', full.names = TRUE)
 
+# get all
+dat <- vector('list', length(fls))
+names(dat) <- fls
+for(fl in fls){
+  
+  cat(fl, '\n')
+  
+  # import
+  tmp <- read_excel(fl, sheet = 'DATA')
+  
+  # timestamp in correct format
+  tmp$TimeStamp <- as.POSIXct(
+    as.character(tmp$TimeStamp), format = '%Y-%m-%d %H:%M:%S', tz = 'America/Regina'
+    )
+  
+  # create a unique identifier for replicates, reps are those within 10 s of each other
+  diffs <- which(c(diff(tmp$TimeStamp)) > 10) + 1
+  diffs <- c(1, diffs)
+  tmp$reps <- rep(1:(length(diffs)), times = diff(c(diffs, 1 + nrow(tmp))))
+  
+  # combine reps by average
+  tmp <- tmp[, c('Station', 'TimeStamp', 'PAR', 'reps')]
+  tmp <- aggregate(cbind(PAR, TimeStamp) ~ Station + reps, tmp, mean, 
+    na.rm = T)
+  
+  # time back to correct format
+  tmp$TimeStamp <- as.POSIXct(tmp$TimeStamp, tz = 'America/Regina', 
+    origin = '1970-01-01')
+  tmp <- tmp[, !names(tmp) %in% 'reps']
+  
+  dat[[fl]] <- tmp
+  
+}
+
+dat <- do.call('rbind', dat)
+row.names(dat) <- 1:nrow(dat)
+
+dat2 <- split(dat, dat$Station)
+dat2 <- lapply(dat2, setstep, date_col = 'TimeStamp', timestep = 30) 
+dat2 <- do.call('rbind', dat2)
+dat2 <- na.omit(dat2)
+row.names(dat2) <- 1:nrow(dat2)
+
+ggplot(dat, aes(x = TimeStamp, y = PAR)) +
+  geom_point() + 
+  facet_grid(~ Station, scales = 'free_y') + 
+  theme_bw()
+
+ggplot(dat2, aes(x = TimeStamp, y = PAR)) +
+  geom_point() + 
+  facet_grid(~ Station, scales = 'free_y') + 
+  theme_bw()
 
