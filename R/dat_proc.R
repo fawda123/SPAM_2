@@ -131,18 +131,20 @@ for(fl in fls){
   # import
   tmp <- read_excel(fl, sheet = 'LOG8')
   
-  dat[[fl]] <- tmp
+  dat[[fl]] <- data.frame(tmp)
   
 }
 
 dat <- do.call('rbind', dat)
+dat$deploy <- row.names(dat) %>% 
+  gsub('^ignore/|_000_000_LOG8.xlsx\\.[0-9].*$', '', .)
 row.names(dat) <- 1:nrow(dat)
 
 # datetimestamp, select relevant cols
 datetimestamp <- with(dat, paste(paste(year, month, day, sep = '-'), paste(hour, minute, sec, sep = ':')))
 dat$datetimestamp <- as.POSIXct(datetimestamp, format = '%y-%m-%d %H:%M:%S', tz = 'America/Regina')
 dat <- dat[order(dat$datetimestamp), ]
-tosel <- c('datetimestamp', 'Dir', 'Mag', 'Depth')
+tosel <- c('datetimestamp', 'Dir', 'Mag', 'Depth', 'deploy')
 dat <- dat[, grepl(paste(tosel, collapse = '|'), names(dat))]
 
 adcp_dat <- dat
