@@ -1,16 +1,20 @@
 ######
 # plot adcp data
 # dat_in input row to plot
-# shp_in SpatialPolygonsDataFrame input for optional map
+# shp_in SpatialPolygonsDataFrame input for map
 # loc_in location of ADCP in reference to shp_in
 # bins depth bins to plot
-# lims min, max values for magnitude value
 # coord_lims list of constraining x, y locations for plotting shp_in
-# arrow length of arrow ends
-plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
-  lims = c(0.01, 0.5), coord_lims = NULL, arrow = 0.2, barmax = 0.3){
+# arrow end of arrow size
+# barmax axis limits on barplot
+# barcol vector of colors for bars on barplot
+plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL, 
+  coord_lims = NULL, arrow = 0.2, barmax = NULL, barcol = NULL){
     
   if(is.null(loc_in)) stop('ADCP location needed')  
+  
+  # barplot colors if not provided
+  if(is.null(barcol)) barcol <- 'gray30'
   
   # get bins if not provided
   if(is.null(bins)) 
@@ -22,6 +26,9 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
   mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))]
   mags <- as.numeric(mags)
 
+  # get barmax from data if not supplied
+  if(is.null(barmax)) barmax <- max(mags)
+  
   # change axis reference for directions
   dirs[dirs > 90] <- 360 - dirs[dirs > 90] + 90
   dirs[dirs <= 90] <- 90 - dirs[dirs <= 90]
@@ -65,7 +72,7 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
 
   # mag plot
   p2 <- ggplot(vecs, aes(x = gsub('Bin ', '', bins), y = mags)) + 
-    geom_bar(stat = 'identity') + 
+    geom_bar(stat = 'identity', fill = barcol, colour = barcol) + 
     facet_wrap(~bins, ncol = 1) +
     theme_classic() +
     theme(
@@ -87,11 +94,12 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
 # dat_in input row to plot
 # shp_in SpatialPolygonsDataFrame input for optional map
 # loc_in location of ADCP in reference to shp_in
+# col_vec colors to use for color ramp on bar plot
 # ... other arguments passed to plot_adcp
-get_multi <- function(dat_in, shp_in = NULL, loc_in = NULL, interp = NULL, ...){
+get_multi <- function(dat_in, col_vec, shp_in, loc_in, interp = NULL, bins = NULL, ...){
   
   # remove depth column
-  dat_in <- dat_in[, grep('^Depth', names(dat_in), invert = TRUE)]
+  dat_in <- dat_in[, grep('^Mag|^Dir|datetimestamp', names(dat_in))]
   
   # interp values for smoother plots
   if(!is.null(interp)){
@@ -114,7 +122,21 @@ get_multi <- function(dat_in, shp_in = NULL, loc_in = NULL, interp = NULL, ...){
   cat('\n% complete...\n\n')
   counts <- round(seq(1, nrow(dat_in), length = 20))
 
+  # get bins if not provided
+  if(is.null(bins)) 
+    bins <- 1:length(grep('^Dir', names(dat_in)))
   
+  # get barmax based on all data
+  mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))]
+  barmax <- max(mags)
+
+  # get color vectors
+  nc <- ncol(mags)
+  nr <- nrow(mags)
+  cols <- unlist(mags)
+  cols <- col_fun(cols, col_vec)
+  cols <- matrix(cols, nrow = nr, ncol = nc)
+ 
   # pass each row to plot_adcp
   for(row in 1:nrow(dat_in)){
     
@@ -122,9 +144,23 @@ get_multi <- function(dat_in, shp_in = NULL, loc_in = NULL, interp = NULL, ...){
     perc <- 5 * which(row == counts)
     if(length(perc) != 0) cat(perc, '\t')
     
+    # barplot cols
+    barcol <- cols[row, ]
+    
     # create plot
-    plot_adcp(dat_in[row, ], shp_in, loc_in, ...)
+    plot_adcp(dat_in[row, ], shp_in, loc_in, bins = bins, barmax = barmax, barcol = barcol, ...)
     
   }
+  
+}
+
+######
+# vals_in values to link to color
+# cols_in colors for color ramp
+col_fun <- function(vals_in, cols_in){
+
+  vals <- scales::rescale(vals_in, c(0, 1))
+  cols <- colorRamp(cols_in)(vals)
+  apply(cols, 1, function(x) rgb(x[1], x[2], x[3], max = 255))
   
 }
