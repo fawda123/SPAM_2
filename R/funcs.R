@@ -1,33 +1,35 @@
 ######
 # plot adcp data
 # dat_in input row to plot
+# all_in all adcp data
 # shp_in SpatialPolygonsDataFrame input for map
 # loc_in location of ADCP in reference to shp_in
 # bins depth bins to plot
 # coord_lims list of constraining x, y locations for plotting shp_in
 # arrow end of arrow size
-# barmax axis limits on barplot
+# barmin lower axis limit on barplot
+# barmax upper axis limit on barplot
 # barcol vector of colors for bars on barplot
-plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL, 
-  coord_lims = NULL, arrow = 0.2, barmax = NULL, barcol = NULL){
+plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6, 
+  coord_lims = NULL, arrow = 0.2, barmin = 0, barmax = NULL, barcol = NULL){
     
-  if(is.null(loc_in)) stop('ADCP location needed')  
-  
-  # barplot colors if not provided
-  if(is.null(barcol)) barcol <- 'gray30'
-  
-  # get bins if not provided
-  if(is.null(bins)) 
-    bins <- 1:length(grep('^Dir', names(dat_in)))
-  
   # subset directions, mags by bins
   dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))]
   dirs <- as.numeric(dirs)
   mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))]
   mags <- as.numeric(mags)
 
-  # get barmax from data if not supplied
+  # get barrng from data if not supplied
   if(is.null(barmax)) barmax <- max(mags)
+  
+  # colors of directions, based on angle
+  dircol <- rainbow(360)[1 + dirs] # min direction is zero
+  
+  # color of bars, based on relative magnitude of mags
+  if(is.null(barcol)){
+    barcol <- c('tomato1', 'lightgreen')
+    barcol <- col_fun(mags, barcol)
+  }
   
   # change axis reference for directions
   dirs[dirs > 90] <- 360 - dirs[dirs > 90] + 90
@@ -47,17 +49,18 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
     mags = mags
     )
   loc_in <- data.frame(long = loc_in[1], lat = loc_in[2])
-
+  
   # dir plot
   p1 <- suppressMessages({ggplot(loc_in, aes(x = long, y = lat)) + 
     coord_fixed(xlim = bbox(shp_in)[1, ], ylim = bbox(shp_in)[2, ]) + 
     geom_polygon(data = shp_in, aes(x = long, y = lat, group = group), 
       fill = 'lightgrey') +
+    geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2, 
+      colour = bins), size = 1.5, alpha = 0.6) +
     geom_point() +
-    geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2), 
-      arrow = grid::arrow(length = grid::unit(arrow, "cm"))
-      ) +
+    scale_colour_manual(values = dircol) + 
     theme_classic() + 
+    theme(legend.position = 'none') +
     xlab('Long') +
     ylab('Lat') + 
     facet_wrap(~bins, ncol = 1)
@@ -72,21 +75,60 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
 
   # mag plot
   p2 <- ggplot(vecs, aes(x = gsub('Bin ', '', bins), y = mags)) + 
-    geom_bar(stat = 'identity', fill = barcol, colour = barcol) + 
+    geom_bar(stat = 'identity', aes(fill = bins, colour = bins)) + 
     facet_wrap(~bins, ncol = 1) +
     theme_classic() +
     theme(
       axis.title.y = element_blank(), 
-      axis.text.y = element_text(size = 4)
+      axis.text.y = element_text(size = 4), 
+      legend.position = 'none'
       ) + 
-    scale_y_continuous(limits = c(0, barmax)) + 
+    scale_y_continuous(limits = c(barmin, barmax)) + 
+    scale_fill_manual(values = as.character(barcol)) + 
+    scale_colour_manual(values = as.character(barcol)) +
     coord_flip() +
     ylab('Velocity')
 
+  # pressure plot
+  p3 <- plot_press(dat_in, all_in) 
+  p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
+  
   # combined grob
-  gridExtra::grid.arrange(p1, p2, ncol = 2, widths = c(1, 1), 
-    main = as.character(dat_in$datetimestamp))
+  gridExtra::grid.arrange(
+    p3, 
+    gridExtra::arrangeGrob(p1, p2, ncol = 2, widths = c(1, 1)), 
+    ncol = 1,
+    main = as.character(dat_in$datetimestamp), 
+    heights = c(0.2, 1)
+  )
  
+}
+
+######
+# plot the pressure time series within a window
+#
+# dat_in row of adcp data at center of plot
+# all_in all adcp data
+# win window around center of plot, default two days
+plot_press <- function(dat_in, all_in, win = NULL){
+
+  # window defaults to one day
+  if(is.null(win))
+    win <- 60 * 60 * 24
+  
+  # x limits of plot from window
+  lims <- with(dat_in, c(datetimestamp - win, datetimestamp + win))
+  
+  # the plot and return
+  p1 <- ggplot(dat_in, aes(x = datetimestamp, y = Depth.mm./1000)) +
+    geom_line(data = all_in, aes(x = datetimestamp, y = Depth.mm./1000)) +
+    geom_point(colour = 'lightgreen', size = 4) +
+    scale_x_datetime('Time stamp', limits = lims) +
+    scale_y_continuous('Depth (m)') +
+    theme_classic()
+  
+  return(p1)
+  
 }
 
 ######
@@ -96,10 +138,10 @@ plot_adcp <- function(dat_in, shp_in = NULL, loc_in = NULL, bins = NULL,
 # loc_in location of ADCP in reference to shp_in
 # col_vec colors to use for color ramp on bar plot
 # ... other arguments passed to plot_adcp
-get_multi <- function(dat_in, col_vec, shp_in, loc_in, interp = NULL, bins = NULL, ...){
+get_multi <- function(dat_in, col_vec, shp_in, loc_in, interp = NULL, bins = 1:6, ...){
   
   # remove depth column
-  dat_in <- dat_in[, grep('^Mag|^Dir|datetimestamp', names(dat_in))]
+  dat_in <- dat_in[, grep('^Mag|^Dir|datetimestamp|^Depth', names(dat_in))]
   
   # interp values for smoother plots
   if(!is.null(interp)){
@@ -136,7 +178,7 @@ get_multi <- function(dat_in, col_vec, shp_in, loc_in, interp = NULL, bins = NUL
   cols <- unlist(mags)
   cols <- col_fun(cols, col_vec)
   cols <- matrix(cols, nrow = nr, ncol = nc)
- 
+
   # pass each row to plot_adcp
   for(row in 1:nrow(dat_in)){
     
@@ -148,7 +190,7 @@ get_multi <- function(dat_in, col_vec, shp_in, loc_in, interp = NULL, bins = NUL
     barcol <- cols[row, ]
     
     # create plot
-    plot_adcp(dat_in[row, ], shp_in, loc_in, bins = bins, barmax = barmax, barcol = barcol, ...)
+    plot_adcp(dat_in[row, ], dat_in, shp_in, loc_in, bins = bins, barmax = barmax, barcol = barcol, ...)
     
   }
   
@@ -164,3 +206,4 @@ col_fun <- function(vals_in, cols_in){
   apply(cols, 1, function(x) rgb(x[1], x[2], x[3], max = 255))
   
 }
+
