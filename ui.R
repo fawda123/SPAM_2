@@ -2,7 +2,10 @@ library(shiny)
 library(dygraphs)
 
 data(ctd_dat)
-ctd_dts <- as.character(unique(ctd_dat$Date))
+ctd_dts <- as.character(sort(unique(ctd_dat$Date)))
+
+data(adcp_dat)
+adcp_dts <- unique(as.Date(adcp_dat$datetimestamp))
 
 source('R/funcs.R')
 
@@ -281,13 +284,58 @@ shinyUI(fluidPage(
       ),
       
     tabPanel("ADCP",
-             
-        h3('More nothing!')
         
-      )
-    
-    )
+        HTML('<p></p>'),
+                     
+        # first row of plots
+        fluidRow(
+          
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          # select variable
+          column(width = 3, 
             
+            dateInput(inputId = 'dtsel',
+              label = h4('Date'), 
+              value = adcp_dts[1],
+              min = min(adcp_dts), 
+              max = max(adcp_dts)
+            )
+          
+          ),
+            
+          column(width = 3,
+            
+            numericInput(inputId = 'hrsel', 
+              label = h4('Hour'),
+              min = 2, 
+              value = 12, 
+              max = 24, 
+              step = 2
+            )
+            
+          ),
+          
+          column(width = 3,
+            
+            numericInput(inputId = 'dpwin', 
+              label = h4('Depth plot window (days)'),
+              min = 2, 
+              value = 8, 
+              max = Inf, 
+              step = 1
+            )
+            
+          )
+          
+        ),
+      
+      plotOutput("adcpplot", height = "900px", width = "500px")
+            
+    )
+      
   )
   
-))
+)))

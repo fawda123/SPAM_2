@@ -11,7 +11,8 @@
 # barmax upper axis limit on barplot
 # barcol vector of colors for bars on barplot
 plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6, 
-  coord_lims = NULL, arrow = 0.2, barmin = 0, barmax = NULL, barcol = NULL){
+  coord_lims = NULL, arrow = 0.2, barmin = 0, barmax = NULL, barcol = NULL, 
+  ...){
     
   # subset directions, mags by bins
   dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))]
@@ -90,7 +91,7 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
     ylab('Velocity')
 
   # pressure plot
-  p3 <- plot_press(dat_in, all_in) 
+  p3 <- plot_press(dat_in, all_in, ...) 
   p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
   
   # combined grob
@@ -98,7 +99,7 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
     p3, 
     gridExtra::arrangeGrob(p1, p2, ncol = 2, widths = c(1, 1)), 
     ncol = 1,
-    main = as.character(dat_in$datetimestamp), 
+    top = as.character(dat_in$datetimestamp), 
     heights = c(0.2, 1)
   )
  
@@ -110,7 +111,8 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
 # dat_in row of adcp data at center of plot
 # all_in all adcp data
 # win window around center of plot, default two days
-plot_press <- function(dat_in, all_in, win = NULL){
+# fixed_y as logical will fix the y axis using the whole range of depth variable or only the range within the x window
+plot_press <- function(dat_in, all_in, win = NULL, fixed_y = TRUE){
 
   # window defaults to one day
   if(is.null(win))
@@ -119,12 +121,19 @@ plot_press <- function(dat_in, all_in, win = NULL){
   # x limits of plot from window
   lims <- with(dat_in, c(datetimestamp - win, datetimestamp + win))
   
+  if(fixed_y){
+    ylims <- range(all_in$Depth.mm./1000, na.rm = TRUE)
+  } else {
+    ylims <- all_in[all_in$datetimestamp >= lims[1] & all_in$datetimestamp <= lims[2], ]
+    ylims <- range(ylims$Depth.mm./1000, na.rm = TRUE)
+  }
+  
   # the plot and return
   p1 <- ggplot(dat_in, aes(x = datetimestamp, y = Depth.mm./1000)) +
     geom_line(data = all_in, aes(x = datetimestamp, y = Depth.mm./1000)) +
     geom_point(colour = 'lightgreen', size = 4) +
     scale_x_datetime('Time stamp', limits = lims) +
-    scale_y_continuous('Depth (m)') +
+    scale_y_continuous('Depth (m)', limits = ylims) +
     theme_classic()
   
   return(p1)

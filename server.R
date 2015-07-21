@@ -5,13 +5,15 @@ library(tidyr)
 library(dygraphs)
 library(xts)
 library(htmltools)
-devtools::load_all('M:/docs/SWMPr')
+library(maptools)
+library(SWMPr)
 
 source('R/funcs.R')
 
 data(ctd_dat)
 data(wqm_dat)
 data(adcp_dat)
+data(pbay)
 
 # Define server logic required to generate and plot data
 shinyServer(function(input, output, session) {
@@ -71,8 +73,21 @@ shinyServer(function(input, output, session) {
     return(out)
     
   })
-
   
+  # adcp based on date, hour input
+  adcp <- reactive({
+    
+    adcp_dt <- input$dtsel
+    adcp_hr <- input$hrsel
+    tosel <- as.POSIXct(paste(as.character(adcp_dt), adcp_hr), format = '%Y-%m-%d %H', 
+      tz = 'America/Regina')
+    tosel <- which.min(abs(adcp_dat$datetimestamp - tosel))
+    out <- adcp_dat[tosel, ]
+    
+    return(out)
+    
+  })
+
   ######
   # wqm
   
@@ -175,6 +190,21 @@ shinyServer(function(input, output, session) {
 
     toplo <- ctd2()[[4]]
     ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    
+    })
+  
+  ######
+  # adcp plot
+  
+  output$adcpplot <- renderPlot({
+  
+    # day window for depth
+    dpwin <- input$dpwin
+    dpwin <- dpwin * 60 * 60 * 24/2
+    
+    # plot
+    plot_adcp(adcp(), adcp_dat, shp_in = pbay, loc_in = c(-87.13208, 30.45682), 
+      fixed_y = FALSE, win = dpwin)
     
     })
   
