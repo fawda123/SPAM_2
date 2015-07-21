@@ -26,35 +26,155 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # first variable plot
-  output$var1plot <- renderDygraph({
+  # subset ctd_dat by selected date
+  ctd1 <- reactive({
+    
+    sel_date <- as.Date(input$ctd_dts)
+    out <- ctd_dat[ctd_dat$Date %in% sel_date, ]
+    return(out)
+    
+  })
+  
+  # list of ctd data for comparison by variable, need to do this to get rngs
+  ctd2 <- reactive({
+    
+    dtsel1 <- as.Date(input$dt1)
+    dtsel2 <- as.Date(input$dt2)
+    dtsel3 <- as.Date(input$dt3)
+    dtsel4 <- as.Date(input$dt4)
+    out <- list(
+      ctd_dat[ctd_dat$Date %in% dtsel1, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel2, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel3, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel4, ]
+    )
+    
+    return(out)
+    
+  })
+  
+  # range of variables for ctd by variable
+  rngs <- reactive({
+    
+    dtsel1 <- as.Date(input$dt1)
+    dtsel2 <- as.Date(input$dt2)
+    dtsel3 <- as.Date(input$dt3)
+    dtsel4 <- as.Date(input$dt4)
+    out <- list(
+      ctd_dat[ctd_dat$Date %in% dtsel1, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel2, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel3, ], 
+      ctd_dat[ctd_dat$Date %in% dtsel4, ]
+    )
+    out <- get_rngs(out)
+    
+    return(out)
+    
+  })
 
-    varsel <- input$var1
-    plo_fun(varsel, wqm())
+  
+  ######
+  # wqm
+  
+  # first wqm plot
+  output$wqm1plot <- renderDygraph({
+
+    wqmsel <- input$wqm1
+    plo_fun(wqmsel, wqm())
     
     })
 
-  # second variable plot
-  output$var2plot <- renderDygraph({
+  # second wqm plot
+  output$wqm2plot <- renderDygraph({
 
-    varsel <- input$var2
-    plo_fun(varsel, wqm())
+    wqmsel <- input$wqm2
+    plo_fun(wqmsel, wqm())
     
     })
 
-  # third variable plot
-  output$var3plot <- renderDygraph({
+  # third wqm plot
+  output$wqm3plot <- renderDygraph({
     
-    varsel <- input$var3
-    plo_fun(varsel, wqm())
+    wqmsel <- input$wqm3
+    plo_fun(wqmsel, wqm())
     
     })
   
-  # fourth variable plot
-  output$var4plot <- renderDygraph({
+  # fourth wqm plot
+  output$wqm4plot <- renderDygraph({
      
-    varsel <- input$var4
-    plo_fun(varsel, wqm())
+    wqmsel <- input$wqm4
+    plo_fun(wqmsel, wqm())
+    
+    })
+  
+  ######
+  # ctd by date
+  
+  # first ctd1 plot
+  output$ctd1plot1 <- renderPlot({
+
+    ctdsel <- input$ctd1
+    ctd_plot2(ctd1(), ctdsel)
+    
+    })
+
+  # second ctd1 plot
+  output$ctd1plot2 <- renderPlot({
+
+    ctdsel <- input$ctd2
+    ctd_plot2(ctd1(), ctdsel)
+    
+    })
+
+  # third ctd1 plot
+  output$ctd1plot3 <- renderPlot({
+    
+    ctdsel <- input$ctd3
+    ctd_plot2(ctd1(), ctdsel)
+    
+    })
+  
+  # fourth ctd1 plot
+  output$ctd1plot4 <- renderPlot({
+     
+    ctdsel <- input$ctd4
+    ctd_plot2(ctd1(), ctdsel)
+    
+    })
+  
+  ######
+  # ctd by variable
+  
+  # first ctd2 plot
+  output$ctd2plot1 <- renderPlot({
+    
+    toplo <- ctd2()[[1]]
+    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    
+    })
+
+  # second ctd2 plot
+  output$ctd2plot2 <- renderPlot({
+
+    toplo <- ctd2()[[2]]
+    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    
+    })
+
+  # third ctd2 plot
+  output$ctd2plot3 <- renderPlot({
+
+    toplo <- ctd2()[[3]]
+    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    
+    })
+  
+  # fourth ctd2 plot
+  output$ctd2plot4 <- renderPlot({
+
+    toplo <- ctd2()[[4]]
+    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
     
     })
   

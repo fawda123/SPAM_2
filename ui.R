@@ -1,6 +1,9 @@
 library(shiny)
 library(dygraphs)
 
+data(ctd_dat)
+ctd_dts <- as.character(unique(ctd_dat$Date))
+
 source('R/funcs.R')
 
 # Define UI for application
@@ -14,24 +17,6 @@ shinyUI(fluidPage(
   # spacing
   fluidRow(HTML('<p></p>')),
   
-  # top controls
-  fluidRow(
-    
-    column(width = 3,
-      img(src = "spam.jpg", width = 100)
-    ),
-    
-    column(width = 4, 
-      checkboxGroupInput(inputId = 'stats', 
-        label = h4('Stations'),
-        choices = c('P02', 'P05-S', 'P05-B'),
-        selected = c('P02', 'P05-S', 'P05-B'), 
-        inline = TRUE
-      )
-    )
-    
-  ),
-  
   #spacing
   fluidRow(HTML('<p></p>')),
     
@@ -44,31 +29,44 @@ shinyUI(fluidPage(
         # first row of plots
         fluidRow(
           
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          column(width = 9, 
+            checkboxGroupInput(inputId = 'stats', 
+            label = h4('Stations'),
+            choices = c('P02', 'P05-S', 'P05-B'),
+            selected = c('P02', 'P05-S', 'P05-B'), 
+            inline = TRUE
+            )
+          ),
+          
           # first variable
           column(width = 6,
             
-            selectInput(inputId = 'var1',
+            selectInput(inputId = 'wqm1',
               label = NULL,
-              choices = vars(), 
-              selected = vars()[1], 
+              choices = vars('wqm'), 
+              selected = vars('wqm')[1], 
               width = '600px'
             ),
                                    
-            dygraphOutput("var1plot", height = "300px", width = "600px")
+            dygraphOutput("wqm1plot", height = "300px", width = "600px")
           
           ),
           
           # second variable
           column(width = 6, 
           
-            selectInput(inputId = 'var2',
+            selectInput(inputId = 'wqm2',
               label = NULL,
-              choices = vars(), 
-              selected = vars()[2], 
+              choices = vars('wqm'), 
+              selected = vars('wqm')[2], 
               width = '600px'
             ),
       
-            dygraphOutput("var2plot", height = "300px", width = "600px")
+            dygraphOutput("wqm2plot", height = "300px", width = "600px")
             
           )
           
@@ -81,27 +79,27 @@ shinyUI(fluidPage(
           
           column(width = 6,
             
-            selectInput(inputId = 'var3',
+            selectInput(inputId = 'wqm3',
               label = NULL,
-              choices = vars(), 
-              selected = vars()[3], 
+              choices = vars('wqm'), 
+              selected = vars('wqm')[3], 
               width = '600px'
             ),
                                    
-            dygraphOutput("var3plot", height = "300px", width = "600px")
+            dygraphOutput("wqm3plot", height = "300px", width = "600px")
           
           ),
           
           column(width = 6, 
           
-            selectInput(inputId = 'var4',
+            selectInput(inputId = 'wqm4',
               label = NULL,
-              choices = vars(), 
-              selected = vars()[4], 
+              choices = vars('wqm'), 
+              selected = vars('wqm')[4], 
               width = '600px'
             ),
       
-            dygraphOutput("var4plot", height = "300px", width = "600px")
+            dygraphOutput("wqm4plot", height = "300px", width = "600px")
             
           )
           
@@ -109,11 +107,176 @@ shinyUI(fluidPage(
         
       ),
     
-    tabPanel("CTD",
+    tabPanel("CTD by date",
         
-        h3('Nothing!'),     
-        HTML('<br></br>'),
-        h3('Nothing again!')
+        HTML('<p></p>'),
+        
+        # first row of plots
+        fluidRow(
+          
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          # select dates
+          column(width = 9, 
+            selectInput(inputId = 'ctd_dts', 
+              label = h4('Date'),
+              choices = ctd_dts,
+              selected = ctd_dts[1]
+            )
+          ),
+          
+          # first variable
+          column(width = 6,
+            
+            selectInput(inputId = 'ctd1',
+              label = NULL,
+              choices = vars('ctd'), 
+              selected = vars('ctd')[1], 
+              width = '600px'
+            ),
+                                   
+            plotOutput("ctd1plot1", height = "300px", width = "600px")
+          
+          ),
+          
+          # second variable
+          column(width = 6, 
+          
+            selectInput(inputId = 'ctd2',
+              label = NULL,
+              choices = vars('ctd'), 
+              selected = vars('ctd')[2], 
+              width = '600px'
+            ),
+      
+            plotOutput("ctd1plot2", height = "300px", width = "600px")
+            
+          )
+          
+        ), 
+        
+        HTML('<p></p>'),
+        
+        fluidRow(
+          
+          # second variable
+          column(width = 6,
+            
+            selectInput(inputId = 'ctd3',
+              label = NULL,
+              choices = vars('ctd'), 
+              selected = vars('ctd')[3], 
+              width = '600px'
+            ),
+                                   
+            plotOutput("ctd1plot3", height = "300px", width = "600px")
+          
+          ),
+          
+          # fourth variable
+          column(width = 6, 
+          
+            selectInput(inputId = 'ctd4',
+              label = NULL,
+              choices = vars('ctd'), 
+              selected = vars('ctd')[4], 
+              width = '600px'
+            ),
+      
+            plotOutput("ctd1plot4", height = "300px", width = "600px")
+            
+          )
+          
+        )
+      
+      ),
+      
+    tabPanel("CTD by variable",
+        
+        HTML('<p></p>'),
+        
+        # first row of plots
+        fluidRow(
+          
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          # select variable
+          column(width = 9, 
+            selectInput(inputId = 'ctd2sel', 
+              label = h4('Variable'),
+              choices = vars('ctd'),
+              selected = vars('ctd')[1]
+            )
+          ),
+          
+          # first date
+          column(width = 6,
+            
+            selectInput(inputId = 'dt1',
+              label = NULL,
+              choices = ctd_dts, 
+              selected = ctd_dts[1], 
+              width = '600px'
+            ),
+                                   
+            plotOutput("ctd2plot1", height = "300px", width = "600px")
+          
+          ),
+          
+          # second date
+          column(width = 6, 
+          
+            selectInput(inputId = 'dt2',
+              label = NULL,
+              choices = ctd_dts, 
+              selected = ctd_dts[2], 
+              width = '600px'
+            ),
+      
+            plotOutput("ctd2plot2", height = "300px", width = "600px")
+            
+          )
+          
+        ), 
+        
+        HTML('<p></p>'),
+        
+        
+        fluidRow(
+          
+          # third date
+          column(width = 6,
+            
+            selectInput(inputId = 'dt3',
+              label = NULL,
+              choices = ctd_dts, 
+              selected = ctd_dts[3], 
+              width = '600px'
+            ),
+                                   
+            plotOutput("ctd2plot3", height = "300px", width = "600px")
+          
+          ),
+          
+          # fourth date
+          column(width = 6, 
+          
+            selectInput(inputId = 'dt4',
+              label = NULL,
+              choices = ctd_dts, 
+              selected = ctd_dts[4], 
+              width = '600px'
+            ),
+      
+            plotOutput("ctd2plot4", height = "300px", width = "600px")
+            
+          )
+          
+        )
       
       ),
       
