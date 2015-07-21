@@ -18,9 +18,10 @@ shinyServer(function(input, output, session) {
   
   # subset wqm_dat by selected station
   wqm <- reactive({
-
+  
     stats <- input$stats
     out <- wqm_dat[wqm_dat$stat %in% stats, ]
+    out$stat <- droplevels(out$stat)
     return(out)
     
   })

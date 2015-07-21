@@ -676,9 +676,9 @@ filled.legend <-
 # the plotting function
 # varsel is input name, all dat is input data
 plo_fun <- function(varsel, alldat){
-
-  toplo <- alldat[, c('datetimestamp', 'stat', varsel)]
   
+  toplo <- alldat[, c('datetimestamp', 'stat', varsel)]
+
   tocomb <- split(toplo, toplo$stat)
   tocomb <- lapply(tocomb, function(x) x[, c('datetimestamp', varsel)])
   
@@ -689,9 +689,14 @@ plo_fun <- function(varsel, alldat){
   step <- toplo$datetimestamp
   toplo <- as.matrix(toplo[, -1])
   toplo <- as.xts(toplo, order.by = step)
-
+  
+  cols <- as.list(RColorBrewer::brewer.pal(3, 'Set1'))
+  names(cols) <- c('P02', 'P05-S', 'P05-B')
+  cols <- as.character(cols[names(tocomb)])
+  
   dygraph(toplo, ylab = varsel, group = 'group') %>% 
-      dyRangeSelector
+      dyRangeSelector %>% 
+      dyOptions(colors = cols)    
 
 }
 

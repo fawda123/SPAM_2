@@ -18,7 +18,7 @@ shinyUI(fluidPage(
   fluidRow(
     
     column(width = 3,
-      actionButton('runmod', label = img(src = "spam.jpg", width = 120))
+      img(src = "spam.jpg", width = 100)
     ),
     
     column(width = 4, 
