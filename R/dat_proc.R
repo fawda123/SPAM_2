@@ -5,6 +5,8 @@ library(dplyr)
 library(readxl)
 library(ggplot2)
 library(tidyr)
+devtools::load_all('M:/docs/SWMPr')
+# library(SWMPr)
 
 source('R/funcs.R')
 
@@ -163,3 +165,54 @@ ctd_dat <- read_excel('ignore/MasterData.xls', sheet = 'MASTER', col_names = F)
 ctd_dat <- form_dat(as.data.frame(ctd_dat))
 
 save(ctd_dat, file = 'data/ctd_dat.RData')
+
+######
+# PAR
+
+fls <- list.files('ignore/PAR/', recursive = TRUE, full.names = TRUE)
+
+# get all
+par_dat <- vector('list', length(fls))
+names(par_dat) <- fls
+for(fl in fls){
+  
+  cat(fl, '\n')
+  
+  # import, select columns, format timestamp
+  tmp <- read_excel(fl, sheet = 'DATA') %>% 
+    select(Station, TimeStamp, PAR) %>% 
+    mutate(TimeStamp = as.POSIXct(as.character(TimeStamp), 
+      format = '%Y-%m-%d %H:%M:%S', tz = 'America/Regina'
+    )) %>% 
+    rename(
+      stat = Station, 
+      datetimestamp = TimeStamp, 
+      par = PAR
+    )
+  
+  par_dat[[fl]] <- data.frame(tmp)
+  
+}
+
+# combine list
+par_dat <- do.call('rbind', par_dat)
+row.names(par_dat) <- 1:nrow(par_dat)
+par_dat$stat <- factor(par_dat$stat)
+levels(par_dat$stat) <- c('P02', 'P05-B', 'P05-B', 'P05-S')
+par_dat <- arrange(par_dat, stat, datetimestamp)
+
+# combine with wqm data, must do by station
+data(wqm_dat)
+
+stats <- unique(wqm_dat$stat)
+
+# for(st in stats){
+#   
+#   wq_tmp <- filter(wqm_dat, stat == st)
+#   par_tmp <- filter(par_dat, stat == st)
+#   
+#   comb_tmp <- comb(wq_tmp, par_tmp, date_col = 'datetimestamp')
+#   
+# }
+dat <- comb(wqm_dat, par_dat, date_col = 'datetimestamp', timestep = 30)
+
