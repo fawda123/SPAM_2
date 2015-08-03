@@ -5,8 +5,8 @@ library(dplyr)
 library(readxl)
 library(ggplot2)
 library(tidyr)
-devtools::load_all('M:/docs/SWMPr')
-# library(SWMPr)
+# devtools::load_all('M:/docs/SWMPr')
+library(SWMPr)
 
 source('R/funcs.R')
 
@@ -64,7 +64,7 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 #   geom_line() + 
 #   facet_grid(var ~ stat, scales = 'free_y') + 
 #   theme_bw()
-
+# 
 ######
 # PAR
 # 
@@ -123,49 +123,49 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 #   geom_point() + 
 #   facet_grid(~ Station, scales = 'free_y') + 
 #   theme_bw()
-
-######
-# ADCP
-fls <- list.files('ignore/', 'LOG', full.names = TRUE)
-
-# get all
-dat <- vector('list', length(fls))
-names(dat) <- fls
-for(fl in fls){
-  
-  cat(fl, '\n')
-  
-  # import
-  tmp <- read_excel(fl, sheet = 'LOG8')
-  
-  dat[[fl]] <- data.frame(tmp)
-  
-}
-
-dat <- do.call('rbind', dat)
-dat$deploy <- row.names(dat) %>% 
-  gsub('^ignore/|_000_000_LOG8.xlsx\\.[0-9].*$', '', .)
-row.names(dat) <- 1:nrow(dat)
-
-# datetimestamp, select relevant cols
-datetimestamp <- with(dat, paste(paste(year, month, day, sep = '-'), paste(hour, minute, sec, sep = ':')))
-dat$datetimestamp <- as.POSIXct(datetimestamp, format = '%y-%m-%d %H:%M:%S', tz = 'America/Regina')
-dat <- dat[order(dat$datetimestamp), ]
-tosel <- c('datetimestamp', 'Dir', 'Mag', 'Depth', 'deploy')
-dat <- dat[, grepl(paste(tosel, collapse = '|'), names(dat))]
-
-adcp_dat <- dat
-save(adcp_dat, file = 'data/adcp_dat.RData')
-
-######
-# CTD
-
-# get file, I had to manually edit some entries 
-ctd_dat <- read_excel('ignore/MasterData.xls', sheet = 'MASTER', col_names = F)
-ctd_dat <- form_dat(as.data.frame(ctd_dat))
-
-save(ctd_dat, file = 'data/ctd_dat.RData')
-
+# 
+# ######
+# # ADCP
+# fls <- list.files('ignore/', 'LOG', full.names = TRUE)
+# 
+# # get all
+# dat <- vector('list', length(fls))
+# names(dat) <- fls
+# for(fl in fls){
+#   
+#   cat(fl, '\n')
+#   
+#   # import
+#   tmp <- read_excel(fl, sheet = 'LOG8')
+#   
+#   dat[[fl]] <- data.frame(tmp)
+#   
+# }
+# 
+# dat <- do.call('rbind', dat)
+# dat$deploy <- row.names(dat) %>% 
+#   gsub('^ignore/|_000_000_LOG8.xlsx\\.[0-9].*$', '', .)
+# row.names(dat) <- 1:nrow(dat)
+# 
+# # datetimestamp, select relevant cols
+# datetimestamp <- with(dat, paste(paste(year, month, day, sep = '-'), paste(hour, minute, sec, sep = ':')))
+# dat$datetimestamp <- as.POSIXct(datetimestamp, format = '%y-%m-%d %H:%M:%S', tz = 'America/Regina')
+# dat <- dat[order(dat$datetimestamp), ]
+# tosel <- c('datetimestamp', 'Dir', 'Mag', 'Depth', 'deploy')
+# dat <- dat[, grepl(paste(tosel, collapse = '|'), names(dat))]
+# 
+# adcp_dat <- dat
+# save(adcp_dat, file = 'data/adcp_dat.RData')
+# 
+# ######
+# # CTD
+# 
+# # get file, I had to manually edit some entries 
+# ctd_dat <- read_excel('ignore/MasterData.xls', sheet = 'MASTER', col_names = F)
+# ctd_dat <- form_dat(as.data.frame(ctd_dat))
+# 
+# save(ctd_dat, file = 'data/ctd_dat.RData')
+# 
 ######
 # PAR
 
@@ -202,17 +202,29 @@ levels(par_dat$stat) <- c('P02', 'P05-B', 'P05-B', 'P05-S')
 par_dat <- arrange(par_dat, stat, datetimestamp)
 
 # combine with wqm data, must do by station
+# set step at 30 minutes
 data(wqm_dat)
 
 stats <- unique(wqm_dat$stat)
+out <- vector('list', length(stats))
+names(out) <- stats
+for(st in stats){
+  
+  wq_tmp <- filter(wqm_dat, stat %in% st)
+  par_tmp <- filter(par_dat, stat%in% st)
+  
+  comb_tmp <- comb(wq_tmp, par_tmp, timestep = 30, date_col = 'datetimestamp', 
+    method = 'union') %>% 
+    select(-i.stat)
+  comb_tmp$stat <- st
+  
+  out[[st]] <- comb_tmp
+  
+}
 
-# for(st in stats){
-#   
-#   wq_tmp <- filter(wqm_dat, stat == st)
-#   par_tmp <- filter(par_dat, stat == st)
-#   
-#   comb_tmp <- comb(wq_tmp, par_tmp, date_col = 'datetimestamp')
-#   
-# }
-dat <- comb(wqm_dat, par_dat, date_col = 'datetimestamp', timestep = 30)
+wqm_dat <- do.call('rbind', out) %>% 
+  arrange(stat, datetimestamp) %>% 
+  select(stat, datetimestamp, temp, pres, sal, do_mgl, turb, chla, cdom, par) %>% 
+  mutate(stat = factor(stat, levels = c('P02', 'P05-S', 'P05-B')))
 
+save(wqm_dat, file = 'data/wqm_dat.RData')

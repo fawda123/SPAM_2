@@ -1,4 +1,6 @@
 name: SPAM_2
 account: beckmw
-bundleId: 223485
+server: shinyapps.io
+bundleId: 231524
 url: https://beckmw.shinyapps.io/SPAM_2
+when: 1438641429.56604
