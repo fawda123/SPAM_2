@@ -55,16 +55,19 @@ dat <- lapply(dat, function(x) x[, nms])
 dat <- do.call('rbind', dat)
 row.names(dat) <- 1:nrow(dat)
 names(dat) <- c('stat', 'temp', 'pres', 'sal', 'do_mgl', 'turb', 'chla', 'cdom', 'datetimestamp')
+dat$stat <- factor(dat$stat)
+levels(dat$stat) <- c('P02', 'P05-B', 'P05-B', 'P05-S', 'P05-S')
+dat <- arrange(dat, stat, datetimestamp)
 
 wqm_dat <- dat
 save(wqm_dat, file = 'data/wqm_dat.RData')
 
 # toplo <- tidyr::gather(dat, 'var', 'val', temp:cdom)
-# ggplot(toplo, aes(x = datetimestamp, y = val)) +
+# ggplot(toplo, aes(x = datetimestamp, y = value)) +
 #   geom_line() + 
-#   facet_grid(var ~ stat, scales = 'free_y') + 
+#   facet_grid(variable ~ stat, scales = 'free_y') + 
 #   theme_bw()
-# 
+
 ######
 # PAR
 # 
