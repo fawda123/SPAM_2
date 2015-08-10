@@ -713,7 +713,7 @@ plo_fun <- function(varsel, alldat){
 # just a silly function for variable selection
 vars <- function(tosel){
  
-  wqm <- c('temp', 'pres', 'sal', 'do_mgl', 'turb', 'chla', 'cdom', 'par')
+  wqm <- c('temp', 'pres', 'sal', 'do_mgl', 'turb', 'chla', 'cdom', 'par', 'ATemp', 'BP', 'WSpd')
   ctd <- c('Temp', 'Salinity', 'SigmaT', 'DO', 'DOsat', 'Fluor', 'Turb', 'CDOM')
   
   all <- list(wqm = wqm, ctd = ctd)

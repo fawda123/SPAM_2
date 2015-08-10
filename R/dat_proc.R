@@ -7,6 +7,7 @@ library(ggplot2)
 library(tidyr)
 # devtools::load_all('M:/docs/SWMPr')
 library(SWMPr)
+library(WtRegDO)
 
 source('R/funcs.R')
 
@@ -231,3 +232,70 @@ wqm_dat <- do.call('rbind', out) %>%
   mutate(stat = factor(stat, levels = c('P02', 'P05-S', 'P05-B')))
 
 save(wqm_dat, file = 'data/wqm_dat.RData')
+
+######
+# get wx data from PNS
+# combined with wqm_data, duplicated for each station
+
+# # raw data from PNS using weatherData package
+# library('weatherData')
+# get_all <- getWeatherForDate(
+#   'PNS',
+#   '2014-04-04','2015-05-01',
+#   opt_detailed = T,
+#   opt_custom_columns = T,
+#   custom_columns = c(1, 2, 5, 8, 13)
+#   )
+# 
+# wx_dat <- get_all
+# save(wx_dat, file = 'data/wx_dat.RData')
+                  
+# process wx data in correct format for metab
+data(wx_dat)
+
+wx_dat <- select(wx_dat, Time, TemperatureF, Sea_Level_PressureIn, Wind_SpeedMPH) %>% 
+  rename(
+    datetimestamp = Time, 
+    ATemp = TemperatureF,
+    BP = Sea_Level_PressureIn,
+    WSpd = Wind_SpeedMPH
+  ) %>% 
+  mutate( # missing and text values to appropriate values
+    datetimestamp = as.POSIXct(as.character(datetimestamp), format = '%Y-%m-%d %H:%M:%S', tz = 'America/Regina'),
+    ATemp = as.numeric(replace(ATemp, ATemp == -9999, NA)),
+    WSpd = replace(WSpd, grepl('^-9999', WSpd), NA),
+    WSpd = as.numeric(replace(WSpd, WSpd %in% 'Calm', '0')),
+    BP = as.numeric(replace(BP, BP == -9999, NA))
+  ) %>% 
+  mutate(
+    ATemp = (ATemp - 32) * 5 / 9, # F to C
+    WSpd = WSpd * 1609.34 / 3600, # mph to meters/s
+    BP = BP * 33.86 # inches of hg to mb
+  )
+
+# combine with wqm_dat
+# have to do station wise because of non-unique wx data
+data(wqm_dat)
+
+stats <- unique(wqm_dat$stat)
+out <- vector('list', length(stats))
+names(out) <- stats
+for(st in stats){
+  
+  wq_tmp <- filter(wqm_dat, stat %in% st)
+  
+  comb_tmp <- comb(wq_tmp, wx_dat, timestep = 30, date_col = 'datetimestamp', 
+    method = 'union')
+  comb_tmp$stat <- st
+  
+  out[[st]] <- comb_tmp
+  
+}
+
+wqm_dat <- do.call('rbind', out) %>% 
+  arrange(stat, datetimestamp) %>% 
+  mutate(stat = factor(stat, levels = c('P02', 'P05-S', 'P05-B')))
+
+save(wqm_dat, file = 'data/wqm_dat.RData')
+
+
