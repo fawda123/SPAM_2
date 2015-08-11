@@ -7,12 +7,14 @@ library(xts)
 library(htmltools)
 library(maptools)
 library(SWMPr)
+library(WtRegDO)
 
 source('R/funcs.R')
 
 data(ctd_dat)
 data(wqm_dat)
 data(adcp_dat)
+data(met_dat)
 data(pbay)
 
 # Define server logic required to generate and plot data
@@ -205,6 +207,60 @@ shinyServer(function(input, output, session) {
     # plot
     plot_adcp(adcp(), adcp_dat, shp_in = pbay, loc_in = c(-87.13208, 30.45682), 
       fixed_y = FALSE, win = dpwin)
+    
+    })
+  
+  ######
+  # metab plots
+  
+  # p02
+  output$metplot1 <- renderPlot({
+  
+    # day window for depth
+    aggperiod <- input$aggperiod
+    errbars <- input$errbars
+    slider <- input$slider
+    if(!errbars) errbars <- NULL
+    else errbars <-  0.05
+      
+    # plot
+    plot(met_dat[[1]], by = aggperiod, alpha = errbars, width = 5) +
+      ggtitle('P02') +
+      scale_y_continuous(limits = slider)
+    
+    })
+  
+  # P05-B
+  output$metplot2 <- renderPlot({
+  
+    # day window for depth
+    aggperiod <- input$aggperiod
+    errbars <- input$errbars
+    slider <- input$slider
+    if(!errbars) errbars <- NULL
+    else errbars <-  0.05
+    
+    # plot
+    plot(met_dat[[2]], by = aggperiod, alpha = errbars, width = 5) +
+      ggtitle('P05-B') +
+      scale_y_continuous(limits = slider)
+    
+    })
+  
+  # P05-S
+  output$metplot3 <- renderPlot({
+  
+    # day window for depth
+    aggperiod <- input$aggperiod
+    errbars <- input$errbars
+    slider <- input$slider
+    if(!errbars) errbars <- NULL
+    else errbars <-  0.05
+    
+    # plot
+    plot(met_dat[[3]], by = aggperiod, alpha = errbars, width = 5) +
+      ggtitle('P05-S') +
+      scale_y_continuous(limits = slider)
     
     })
   

@@ -334,8 +334,55 @@ shinyUI(fluidPage(
       
       plotOutput("adcpplot", height = "900px", width = "500px")
             
-    )
+    ), 
       
+      
+  tabPanel("Metabolism",
+        
+        HTML('<p></p>'),
+                     
+        # first row of plots
+        fluidRow(
+          
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          # select agg period
+          column(width = 3, 
+            
+            selectInput(inputId = 'aggperiod',
+              label = h4('Aggregation period'), 
+              choices = c('days', 'weeks', 'months'),
+              selected = 'days'
+            )
+            
+          ), 
+          
+          # axis limits
+          column(width = 3, 
+            
+            sliderInput("slider", label = h4("Y-axis limits"), min = -2000, 
+              max = 2000, value = c(-500, 500)
+            )
+          
+          ), 
+          
+          # remove err bars
+          column(width = 3, 
+      
+            checkboxInput("errbars", 
+                  label = "Include error bars",
+                  value = T)
+            
+          )
+      
+      ),
+    
+      plotOutput("metplot1", height = "300px", width = "1000px"),
+      plotOutput("metplot3", height = "300px", width = "1000px"),
+      plotOutput("metplot2", height = "300px", width = "1000px")
+    
   )
   
-)))
+))))

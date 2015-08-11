@@ -8,6 +8,7 @@ library(tidyr)
 # devtools::load_all('M:/docs/SWMPr')
 library(SWMPr)
 library(WtRegDO)
+# devtools::load_all('M:/docs/SWMP/WtRegDO')
 
 source('R/funcs.R')
 
@@ -298,4 +299,115 @@ wqm_dat <- do.call('rbind', out) %>%
 
 save(wqm_dat, file = 'data/wqm_dat.RData')
 
+######
+# metabolism data
+rm(list = ls())
 
+data(wqm_dat)
+
+# put data in format that works with ecometab function from WtRegDO
+toproc <- dplyr::rename(wqm_dat, 
+    DateTimeStamp = datetimestamp,
+    Temp = temp, 
+    Depth = pres, 
+    Sal = sal, 
+    DO_mgl = do_mgl
+  ) %>% 
+  select(-turb, -chla, -cdom, -par)
+  
+# metadata for each station, required for ecometab
+metas <- list(
+  `P02` = c(30.54035, -87.16067, 2.064245), 
+  `P05-S` = c(30.45682, -87.13208, 3.502017/2),
+  `P05-B` = c(30.45682, -87.13208, 3.502017/2)
+)
+
+stats <- unique(toproc$stat)
+out <- vector('list', length(stats))
+names(out) <- stats
+for(st in stats){
+  
+  cat(st, '\t')
+  
+  wq_tmp <- filter(toproc, stat %in% st) %>% 
+    mutate(stat = NULL)
+  
+  # do not use air/sea exhange of bottom
+  bott <- F
+  if(st %in% 'P05-B') bott <- T
+  
+  met_tmp <- WtRegDO::ecometab(wq_tmp, lat = metas[[st]][1], long = metas[[st]][2], 
+    tz = 'America/Regina', depth_val = metas[[st]][3], bott_stat = bott)
+  
+  out[[st]] <- met_tmp
+  
+}
+
+met_dat <- out
+save(met_dat, file = 'data/met_dat.RData')
+
+######
+# additional wqm post-processing to remove bogus data
+
+data(wqm_dat)
+
+# 18-28 May P02 bad salinity
+dts <- as.POSIXct(c('2014-05-18 0:0', '2014-05-29 0:0'), format = '%Y-%m-%d %H:%M', tz = 'America/Regina')
+vec <- with(wqm_dat, datetimestamp <= dts[2] & datetimestamp >= dts[1] & stat %in% 'P02')
+wqm_dat$sal <- replace(wqm_dat$sal, vec, NA)
+
+# 13-17 Aug may P05-B bad salinity
+dts <- as.POSIXct(c('2014-08-13 0:0', '2014-08-18 0:0'), format = '%Y-%m-%d %H:%M', tz = 'America/Regina')
+vec <- with(wqm_dat, datetimestamp <= dts[2] & datetimestamp >= dts[1] & stat %in% 'P05-B')
+wqm_dat$sal <- replace(wqm_dat$sal, vec, NA)
+
+# spikes in CDOM all sites
+tmp <- split(wqm_dat, wqm_dat$stat)
+tmp <- lapply(tmp, function(x) {
+  
+  qts <- quantile(x$cdom, c(0.01, 0.99), na.rm = TRUE)
+  x$cdom <- with(x, replace(cdom, cdom < qts[1] | cdom > qts[2], NA))
+  return(x)
+  
+  })
+tmp <- do.call('rbind', tmp) %>% 
+  arrange(stat, datetimestamp)
+wqm_dat <- tmp
+
+save(wqm_dat, file = 'data/wqm_dat.RData')
+
+# ######
+# # additional ctd post-processing to remove bogus data
+# data(ctd_dat)
+# 
+# # bottom bumps of CTD in Oct 2014 for fluor and turb
+# dt <- as.Date('2014-10-15')
+# stat <- 'P05'
+# depth <- 4.25
+# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+# ctd_dat[sel, 'Fluor'] <- 2.2299 # val at next highest reading
+# ctd_dat[sel, 'Turb'] <- 2.680488 # val at next highest reading
+# 
+# # bottom bumps of CTD in April 2014 for fluor and turb
+# dt <- as.Date('2014-04-21')
+# stat <- 'P04'
+# depth <- 2.75
+# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+# ctd_dat[sel, 'Fluor'] <- 1.88  
+# ctd_dat[sel, 'Turb'] <- 5.09 
+# 
+# # bottom bumps of CTD in Dec 2014 for fluor and turb, p5 and p6
+# dt <- as.Date('2014-12-10')
+# stat <- 'P05'
+# depth <- 4
+# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+# ctd_dat[sel, 'Fluor'] <- 2.7677 
+# ctd_dat[sel, 'Turb'] <- 14.724517 
+# 
+# stat <- 'P06'
+# depth <- 5.5
+# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+# ctd_dat[sel, 'Fluor'] <- 2.1999093 
+# ctd_dat[sel, 'Turb'] <- 14.724517
+# 
+# save(ctd_dat, file = 'data/ctd_dat.RData')
