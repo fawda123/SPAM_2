@@ -162,15 +162,6 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 # adcp_dat <- dat
 # save(adcp_dat, file = 'data/adcp_dat.RData')
 # 
-# ######
-# # CTD
-# 
-# # get file, I had to manually edit some entries 
-# ctd_dat <- read_excel('ignore/MasterData.xls', sheet = 'MASTER', col_names = F)
-# ctd_dat <- form_dat(as.data.frame(ctd_dat))
-# 
-# save(ctd_dat, file = 'data/ctd_dat.RData')
-# 
 ######
 # PAR
 
@@ -376,38 +367,98 @@ wqm_dat <- tmp
 
 save(wqm_dat, file = 'data/wqm_dat.RData')
 
-# ######
-# # additional ctd post-processing to remove bogus data
-# data(ctd_dat)
+######
+# CTD
+
+# # # copy files from L drive
+# # fls <- list.files('L:/lab/SPAM2/CTD/Processing', 'CTD.*\\.xls', recursive = T, full.names = TRUE)
+# # fls <- grep('dy\\.xls$', fls, value = T, invert = T)
+# # file.copy(fls, 'M:/docs/SPAM_2/ignore/')
 # 
-# # bottom bumps of CTD in Oct 2014 for fluor and turb
-# dt <- as.Date('2014-10-15')
-# stat <- 'P05'
-# depth <- 4.25
-# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
-# ctd_dat[sel, 'Fluor'] <- 2.2299 # val at next highest reading
-# ctd_dat[sel, 'Turb'] <- 2.680488 # val at next highest reading
+# # get all
+# fls <- list.files('ignore/', '^CTD', full.names = TRUE)
 # 
-# # bottom bumps of CTD in April 2014 for fluor and turb
-# dt <- as.Date('2014-04-21')
-# stat <- 'P04'
-# depth <- 2.75
-# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
-# ctd_dat[sel, 'Fluor'] <- 1.88  
-# ctd_dat[sel, 'Turb'] <- 5.09 
+# dat <- vector('list', length(fls))
+# names(dat) <- fls
+# for(fl in fls){
+#   
+#   cat(fl, '\n')
+#   
+#   # import
+#   tmp <- read_excel(fl, sheet = 'forAccess')
+#   tmp <- tmp[, !grepl('LAYER|PAR|^N$|^RSQ$|pH', names(tmp))]
+#   
+#   dat[[fl]] <- data.frame(tmp)
+#   
+# }
 # 
-# # bottom bumps of CTD in Dec 2014 for fluor and turb, p5 and p6
-# dt <- as.Date('2014-12-10')
-# stat <- 'P05'
-# depth <- 4
-# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
-# ctd_dat[sel, 'Fluor'] <- 2.7677 
-# ctd_dat[sel, 'Turb'] <- 14.724517 
-# 
-# stat <- 'P06'
-# depth <- 5.5
-# sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
-# ctd_dat[sel, 'Fluor'] <- 2.1999093 
-# ctd_dat[sel, 'Turb'] <- 14.724517
-# 
+# dat <- do.call('rbind', dat)
+# row.names(dat) <- 1:nrow(dat)
+# ctd_dat <- form_dat(dat)
+# ctd_dat <- arrange(ctd_dat, Date, Station, Depth)
+#
 # save(ctd_dat, file = 'data/ctd_dat.RData')
+
+##
+# additional ctd post-processing to remove bogus data
+data(ctd_dat)
+
+# bottom bumps of CTD in April 2014 for fluor and turb
+dt <- as.Date('2014-04-21')
+stat <- 'P04'
+depth <- 2.75
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 1.88  
+ctd_dat[sel, 'Turb'] <- 5.09 
+
+stat <- 'P03'
+depth <- 2.25
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Turb'] <- 4.0784377
+
+# bottom bumps of CTD in Sep 2014 for fluor and turb
+dt <- as.Date('2014-09-17')
+stat <- 'P05'
+depth <- 4
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 2.1746 # val at next highest reading
+ctd_dat[sel, 'Turb'] <- 3.3189341 # val at next highest reading
+
+stat <- 'P06'
+depth <- 5.5
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 1.3547 # val at next highest reading
+ctd_dat[sel, 'Turb'] <- 4.9427779 # val at next highest reading
+
+stat <- 'P07'
+depth <- 9.25
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 0.2919 # val at next highest reading
+ctd_dat[sel, 'Turb'] <- 1.5358241 # val at next highest reading
+
+# bottom bumps of CTD in Oct 2014 for fluor and turb
+dt <- as.Date('2014-10-15')
+stat <- 'P05'
+depth <- 4.25
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 2.2299 # val at next highest reading
+ctd_dat[sel, 'Turb'] <- 2.680488 # val at next highest reading
+
+# bottom bumps of CTD in Dec 2014 for fluor and turb, p5 and p6
+dt <- as.Date('2014-12-10')
+stat <- 'P05'
+depth <- 4
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 2.7677
+ctd_dat[sel, 'Turb'] <- 7.4263357
+depth <- 3.75
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Turb'] <- 7.4263357
+
+stat <- 'P06'
+depth <- 5.5
+sel <- with(ctd_dat, Date == dt & Station %in% stat & Depth %in% depth)
+ctd_dat[sel, 'Fluor'] <- 1.2711
+ctd_dat[sel, 'Turb'] <- 2.1999093
+
+save(ctd_dat, file = 'data/ctd_dat.RData')

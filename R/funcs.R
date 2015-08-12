@@ -224,6 +224,8 @@ col_fun <- function(vals_in, cols_in){
 # format master data file
 form_dat <- function(dat.in){
   
+  out <- dat.in
+  
   # cumulative distance for each station
   sta_lens <- data.frame(
     Station = paste0('P0', seq(1,9)),
@@ -231,13 +233,9 @@ form_dat <- function(dat.in){
       c(0, 2.588, 2.022, 1.711, 2.571, 3.076, 4.233, 3.656, 3.913))
   )
   
-  names(dat.in) <- c('Station', 'Date', 'Layer', 'Depth', 
-    'Temp', 'Salinity', 'SigmaT', 'DO', 'DOsat', 'Fluor', 'Turb', 'CDOM', 
-    'PAR', 'KPAR', 'N', 'RSQ')
+  names(out) <- c('Station', 'Date', 'Depth', 
+    'Temp', 'Salinity', 'SigmaT', 'DO', 'DOsat', 'Fluor', 'Turb', 'CDOM')
   
-  # remove last three columns
-  out <- dat.in[, !names(dat.in) %in% c('Layer', 'PAR', 'KPAR', 'N', 'RSQ')]
-
   # format datetimestamp
   out$DateTimeStamp <- as.POSIXct(
     as.character(out$Date), 
