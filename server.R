@@ -20,6 +20,33 @@ data(pbay)
 # Define server logic required to generate and plot data
 shinyServer(function(input, output, session) {
   
+  # ui for metab plots
+  output$aggby <- renderUI({
+
+    aggmeth <- input$aggmeth
+    
+    if(aggmeth == 'bins'){
+      
+      selectInput(inputId = 'aggperiod',
+        label = h4('Binning period'), 
+        choices = c('days', 'weeks', 'months'),
+        selected = 'days'
+        )
+    
+    } else {
+  
+      numericInput(inputId = 'aggperiod', 
+        label = h4('Averaging window (days)'),
+        min = 1, 
+        value = 5, 
+        max = 1000, 
+        step = 1
+        )
+      
+    }
+  
+  })
+  
   # subset wqm_dat by selected station
   wqm <- reactive({
   
@@ -215,14 +242,14 @@ shinyServer(function(input, output, session) {
   
   # p02
   output$metplot1 <- renderPlot({
-  
-    # day window for depth
+
     aggperiod <- input$aggperiod
+    if(is.null(aggperiod)) aggperiod <- 'days'
     errbars <- input$errbars
     slider <- input$slider
     if(!errbars) errbars <- NULL
     else errbars <-  0.05
-      
+
     # plot
     plot(met_dat[[1]], by = aggperiod, alpha = errbars, width = 5) +
       ggtitle('P02') +
@@ -233,8 +260,8 @@ shinyServer(function(input, output, session) {
   # P05-B
   output$metplot2 <- renderPlot({
   
-    # day window for depth
     aggperiod <- input$aggperiod
+    if(is.null(aggperiod)) aggperiod <- 'days'
     errbars <- input$errbars
     slider <- input$slider
     if(!errbars) errbars <- NULL
@@ -250,8 +277,8 @@ shinyServer(function(input, output, session) {
   # P05-S
   output$metplot3 <- renderPlot({
   
-    # day window for depth
     aggperiod <- input$aggperiod
+    if(is.null(aggperiod)) aggperiod <- 'days'
     errbars <- input$errbars
     slider <- input$slider
     if(!errbars) errbars <- NULL

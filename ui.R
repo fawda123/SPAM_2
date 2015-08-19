@@ -348,14 +348,20 @@ shinyUI(fluidPage(
             img(src = "spam.jpg", width = 80)
           ),
           
+          column(width = 3, 
+            
+            selectInput(inputId = 'aggmeth',
+              label = h4('Aggregation method'), 
+              choices = c('bins', 'window'),
+              selected = 'bins'
+            )
+            
+          ),
+          
           # select agg period
           column(width = 3, 
             
-            selectInput(inputId = 'aggperiod',
-              label = h4('Aggregation period'), 
-              choices = c('days', 'weeks', 'months'),
-              selected = 'days'
-            )
+            uiOutput('aggby')
             
           ), 
           
@@ -369,11 +375,11 @@ shinyUI(fluidPage(
           ), 
           
           # remove err bars
-          column(width = 3, 
+          column(width = 2, 
       
             checkboxInput("errbars", 
                   label = "Include error bars",
-                  value = T)
+                  value = F)
             
           )
       

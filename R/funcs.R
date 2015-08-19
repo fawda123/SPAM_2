@@ -92,7 +92,7 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
 
   # pressure plot
   p3 <- plot_press(dat_in, all_in, ...) 
-  p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
+p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
   
   # combined grob
   gridExtra::grid.arrange(

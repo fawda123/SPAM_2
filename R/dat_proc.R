@@ -58,7 +58,7 @@ dat <- do.call('rbind', dat)
 row.names(dat) <- 1:nrow(dat)
 names(dat) <- c('stat', 'temp', 'pres', 'sal', 'do_mgl', 'turb', 'chla', 'cdom', 'datetimestamp')
 dat$stat <- factor(dat$stat)
-levels(dat$stat) <- c('P02', 'P05-B', 'P05-B', 'P05-S', 'P05-S')
+levels(dat$stat) <- c('P02', 'P05-B', 'P05-B', 'P05-S', 'P05-S', 'P05-S')
 dat <- arrange(dat, stat, datetimestamp)
 
 wqm_dat <- dat
@@ -351,6 +351,13 @@ wqm_dat$sal <- replace(wqm_dat$sal, vec, NA)
 dts <- as.POSIXct(c('2014-08-13 0:0', '2014-08-18 0:0'), format = '%Y-%m-%d %H:%M', tz = 'America/Regina')
 vec <- with(wqm_dat, datetimestamp <= dts[2] & datetimestamp >= dts[1] & stat %in% 'P05-B')
 wqm_dat$sal <- replace(wqm_dat$sal, vec, NA)
+
+# remove optics 7/16 to 8/6 for P05-S
+dts <- as.POSIXct(c('2014-07-16 0:0', '2014-08-07 0:0'), format = '%Y-%m-%d %H:%M', tz = 'America/Regina')
+vec <- with(wqm_dat, datetimestamp <= dts[2] & datetimestamp >= dts[1] & stat %in% 'P05-S')
+wqm_dat$chla <- replace(wqm_dat$chla, vec, NA)
+wqm_dat$cdom <- replace(wqm_dat$cdom, vec, NA)
+wqm_dat$turb <- replace(wqm_dat$turb, vec, NA)
 
 # spikes in CDOM all sites
 tmp <- split(wqm_dat, wqm_dat$stat)
