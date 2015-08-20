@@ -214,16 +214,15 @@ plot_adcp2 <- function(all_in, bins = 1:5, rng = NULL, z_bins = NULL, z_tot = 3.
   toplo$dirs[toplo$dirs <= 90] <- with(toplo, 90 - dirs[dirs <= 90])
   
   # x, y locs from polar coords
-  # sclx <- diff(range(as.numeric(toplo$datetimestamp)))
-  xvals <- with(toplo, mags * cos(pi * dirs / 180)) #* sclx
+  xvals <- with(toplo, mags * cos(pi * dirs / 180))
   yvals <- with(toplo, mags * sin(pi * dirs / 180))
-  browser()
   
   # get segment start, end for time series plot of vecs
+  sclval <- diff(range(as.numeric(toplo$datetimestamp)))
   toplo <- data.frame(toplo, xvals, yvals) %>% 
     mutate(
       xvals1 = datetimestamp,
-      xvals2 = datetimestamp + xvals, 
+      xvals2 = datetimestamp + sclval * xvals, 
       yvals1 = 0, 
       yvals2 = yvals
     ) %>% 
