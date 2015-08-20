@@ -1,19 +1,36 @@
 ######
 # plot adcp data
+#
+# Depths in plot are distance from surface based on input data
+#
 # dat_in input row to plot
 # all_in all adcp data
 # shp_in SpatialPolygonsDataFrame input for map
 # loc_in location of ADCP in reference to shp_in
 # bins depth bins to plot
+# z_bins depth (m) of each bin (bin 1 is the bottom), defaults to 0.5 meter spacing with the first at 1m from the transducer (from report, transducer is assumed to be the bottom), reported as depth from surface on the plot in reference to the total depth
+# z_tot total depth of location (m)
 # coord_lims list of constraining x, y locations for plotting shp_in
 # arrow end of arrow size
 # barmin lower axis limit on barplot
 # barmax upper axis limit on barplot
 # barcol vector of colors for bars on barplot
-plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6, 
-  coord_lims = NULL, arrow = 0.2, barmin = 0, barmax = NULL, barcol = NULL, 
-  ...){
+#
+# requires ggplot2
+#
+plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5, 
+  z_bins = NULL, z_tot = 3.5, coord_lims = NULL, arrow = 0.2, barmin = 0, 
+  barmax = NULL, barcol = NULL, ...){
     
+  # defaults to first row of all_in 
+  if(is.null(dat_in)) dat_in <- all_in[1, ]
+  
+  # get depth of bins in relation to surface
+  if(is.null(z_bins)){
+    z_bins <- cumsum(c(1, rep(0.5, length = length(bins) - 1)))
+    z_bins <- z_tot - z_bins
+  }
+  
   # subset directions, mags by bins
   dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))]
   dirs <- as.numeric(dirs)
@@ -41,14 +58,17 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
   yvals <- 0.5 * sin(pi * dirs / 180) # mags * sin(pi * dirs / 180)
   
   # setup plot data
+  bin_labs <- paste('Bin', paste(bins, z_bins, sep = ': '), 'm') 
   vecs <- data.frame(
     long1 = loc_in[1], 
     lat1 = loc_in[2],
     long2 = xvals + loc_in[1], 
     lat2 = yvals + loc_in[2],
-    bins = paste('Bin', bins),
+    bins = bin_labs,
+    z_bins = z_bins,
     mags = mags
     )
+  vecs$bins <- factor(vecs$bins, levels = rev(bin_labs))
   loc_in <- data.frame(long = loc_in[1], lat = loc_in[2])
   
   # dir plot
@@ -75,16 +95,17 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
     )
 
   # mag plot
-  p2 <- ggplot(vecs, aes(x = gsub('Bin ', '', bins), y = mags)) + 
+  p2 <- ggplot(vecs, aes(x = z_bins, y = mags)) + 
     geom_bar(stat = 'identity', aes(fill = bins, colour = bins)) + 
     facet_wrap(~bins, ncol = 1) +
     theme_classic() +
     theme(
       axis.title.y = element_blank(), 
-      axis.text.y = element_text(size = 4), 
+      axis.text.y = element_text(size = 6), 
       legend.position = 'none'
       ) + 
     scale_y_continuous(limits = c(barmin, barmax)) + 
+    scale_x_continuous(trans = "reverse", breaks = unique(vecs$z_bins)) + 
     scale_fill_manual(values = as.character(barcol)) + 
     scale_colour_manual(values = as.character(barcol)) +
     coord_flip() +
@@ -92,7 +113,7 @@ plot_adcp <- function(dat_in, all_in, shp_in, loc_in, bins = 1:6,
 
   # pressure plot
   p3 <- plot_press(dat_in, all_in, ...) 
-p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
+  p3 <- p3 + theme(plot.margin = grid::unit(c(0.2, 0.2, 0.2, 0.4), "in"))
   
   # combined grob
   gridExtra::grid.arrange(
@@ -137,6 +158,95 @@ plot_press <- function(dat_in, all_in, win = NULL, fixed_y = TRUE){
     theme_classic()
   
   return(p1)
+  
+}
+
+######
+# plot adcp direction and magnitude data for selected bins over a time period
+
+# all_in all adcp data
+# bins depth bins to plot
+# rng time window of dates plot as chr string with two elements each of the form yyyy-mm-dd
+# z_bins depth (m) of each bin (bin 1 is the bottom), defaults to 0.5 meter spacing with the first at 1m from the transducer (from report, transducer is assumed to be the bottom), reported as depth from surface on the plot in reference to the total depth
+# z_tot total depth of location (m)
+# tz timezone 
+#
+# requires ggplot2, tidyr 
+#
+plot_adcp2 <- function(all_in, bins = 1:5, rng = NULL, z_bins = NULL, z_tot = 3.5, tz = 'America/Regina', 
+  cols = NULL, ...){
+  
+  # get range of times for plot
+  if(is.null(rng)){
+    
+    rng <- with(all_in, c(datetimestamp[1], datetimestamp[100]))
+    
+  } else {
+    
+    if(length(rng) != 2) stop('rng must have two values')
+    rng <- as.POSIXct(rng, format = '%Y-%m-%d', tz = tz)
+     
+  }
+  
+  # get depth of bins in relation to surface
+  if(is.null(z_bins)){
+    z_bins <- cumsum(c(1, rep(0.5, length = length(bins) - 1)))
+    z_bins <- z_tot - z_bins
+  }
+  
+  # subset data 
+  nms_mag <- c('datetimestamp', paste0('Mag', bins))
+  nms_dir <- gsub('^Mag', 'Dir', nms_mag)
+  vec <- with(all_in, datetimestamp >= rng[1] & datetimestamp <= rng[2])
+  toplo_mag <- all_in[vec, nms_mag]
+  toplo_dir <- all_in[vec, nms_dir]
+  
+  # long-form for plotting
+  toplo_mag <- gather(toplo_mag, 'bin', 'mags', -datetimestamp) %>% 
+    mutate(bin =  gsub('^Mag', 'Bin', bin))
+  toplo_dir <- gather(toplo_dir, 'bin', 'dirs', -datetimestamp) %>% 
+    mutate(bin = gsub('^Dir', 'Bin', bin))
+  toplo <- full_join(toplo_mag, toplo_dir, by = c('datetimestamp', 'bin'))# %>% 
+    # gather('var', 'val', mag:dir)
+  
+  # change axis reference for directions
+  toplo$dirs[toplo$dirs > 90] <- with(toplo, 360 - dirs[dirs > 90] + 90)
+  toplo$dirs[toplo$dirs <= 90] <- with(toplo, 90 - dirs[dirs <= 90])
+  
+  # x, y locs from polar coords
+  # sclx <- diff(range(as.numeric(toplo$datetimestamp)))
+  xvals <- with(toplo, mags * cos(pi * dirs / 180)) #* sclx
+  yvals <- with(toplo, mags * sin(pi * dirs / 180))
+  browser()
+  
+  # get segment start, end for time series plot of vecs
+  toplo <- data.frame(toplo, xvals, yvals) %>% 
+    mutate(
+      xvals1 = datetimestamp,
+      xvals2 = datetimestamp + xvals, 
+      yvals1 = 0, 
+      yvals2 = yvals
+    ) %>% 
+    select(-xvals, -yvals)
+  
+  # default cols
+  if(is.null(cols)) cols <- rev(RColorBrewer::brewer.pal(9, 'Set1')[1:3])
+  
+  # the plot
+  p <- ggplot(toplo) +
+    geom_segment(aes(x = xvals1,  y = yvals1, xend = xvals2, yend = yvals2, colour = mags), size = 1) + 
+    facet_wrap( ~ bin, ncol = 1) + 
+    scale_colour_gradientn(colours = cols) + 
+    theme_bw() + 
+    theme(
+      legend.position = 'none',
+      axis.title.y = element_blank(), 
+      axis.text.y = element_blank(), 
+      axis.ticks.y = element_blank()
+      ) + 
+    scale_x_datetime('Date')
+    
+  return(p)
   
 }
 
