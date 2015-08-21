@@ -15,12 +15,13 @@
 # barmin lower axis limit on barplot
 # barmax upper axis limit on barplot
 # barcol vector of colors for bars on barplot
-#
+# vec_scl scaling value for vector, for better viz
+
 # requires ggplot2
 #
 plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5, 
-  z_bins = NULL, z_tot = 3.5, coord_lims = NULL, arrow = 0.2, barmin = 0, 
-  barmax = NULL, barcol = NULL, ...){
+  z_bins = NULL, z_tot = 3.5, theta = 350, coord_lims = NULL, arrow = 0.2, barmin = 0, 
+  barmax = NULL, barcol = NULL, vec_scl = 5, ...){
     
   # defaults to first row of all_in 
   if(is.null(dat_in)) dat_in <- all_in[1, ]
@@ -35,7 +36,7 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
   dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))]
   dirs <- as.numeric(dirs)
   mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))]
-  mags <- as.numeric(mags)
+  mags <- as.numeric(mags) * vec_scl
 
   # get barrng from data if not supplied
   if(is.null(barmax)) barmax <- max(mags)
@@ -54,9 +55,26 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
   dirs[dirs <= 90] <- 90 - dirs[dirs <= 90]
   
   # x, y locs from polar coords
-  xvals <- 0.5 * cos(pi * dirs / 180) # mags * cos(pi * dirs / 180)
-  yvals <- 0.5 * sin(pi * dirs / 180) # mags * sin(pi * dirs / 180)
+  xvals <- mags * cos(pi * dirs / 180)
+  yvals <- mags * sin(pi * dirs / 180) 
   
+  ## vector rotation based on theta
+  
+  # theta input is zero north, running clockwise
+  # have to change reference for trig funcs
+  if(theta > 90) theta <- 360 - theta + 90
+  else theta <- 90 - theta
+  
+  # get diff of observed data from rotation angle
+  diffval <- dirs - theta
+  
+  # get magnitude of new vectors
+  magsrot <- mags * cos(pi * diffval/180)
+  
+  # find values in polar coords given angle and mag
+  xrot <- magsrot * cos(pi * theta/180)
+  yrot <- magsrot * sin(pi * theta/180)
+
   # setup plot data
   bin_labs <- paste('Bin', paste(bins, z_bins, sep = ': '), 'm') 
   vecs <- data.frame(
@@ -64,9 +82,12 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
     lat1 = loc_in[2],
     long2 = xvals + loc_in[1], 
     lat2 = yvals + loc_in[2],
+    longrot = xrot + loc_in[1], 
+    latrot = yrot + loc_in[2],
     bins = bin_labs,
     z_bins = z_bins,
-    mags = mags
+    mags = mags,
+    magsrot = magsrot
     )
   vecs$bins <- factor(vecs$bins, levels = rev(bin_labs))
   loc_in <- data.frame(long = loc_in[1], lat = loc_in[2])
@@ -78,6 +99,7 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
       fill = 'lightgrey') +
     geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2, 
       colour = bins), size = 1.5, alpha = 0.6) +
+    geom_segment(data = vecs, aes(x = long1, y = lat1, xend = longrot, yend = latrot)) + 
     geom_point() +
     scale_colour_manual(values = dircol) + 
     theme_classic() + 

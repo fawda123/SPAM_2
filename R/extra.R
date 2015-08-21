@@ -7,7 +7,8 @@ data(adcp_dat)
  
 all_in <- adcp_dat
 bins <- 1
-rng <- with(all_in, c(datetimestamp[19], datetimestamp[19]))
+val <- 39
+rng <- with(all_in, c(datetimestamp[val], datetimestamp[val + 12]))
   
 
 # subset data 
@@ -42,36 +43,17 @@ points(0, 0)
 segments(xvals1, yvals1, xvals2, yvals2) 
 
 # angle to reproject
-theta1 <- 199
-theta2 <- theta1 + 180
+theta <- 5
 
-# get original angle from 
-diffval <- with(toplo, c(dirs - theta1, dirs - theta2))
-chk <- which.min(abs(diffval))
+# get diff of angle from vector and 180 plus vector
+diffval <- with(toplo, c(dirs - theta))
 
-if(chk == 1){
-  
-  # get magnitude of new vector
-  magsrot <- with(toplo, mags * cos(pi * diffval[chk]/180))
-  
-  # find values in polar coords given angle and mag
-  xrot <- magsrot * cos(pi * theta1/180)
-  yrot <- magsrot * sin(pi * theta1/180)
-  
-}
+# get magnitude of new vectors
+magsrot <- with(toplo, mags * cos(pi * diffval/180))
 
-
-if(chk == 2){
+# find values in polar coords given angle and mag
+xrot <- magsrot * cos(pi * theta/180)
+yrot <- magsrot * sin(pi * theta/180)
   
-  # get magnitude of new vector
-  magsrot <- with(toplo, mags * cos(pi * diffval[chk]/180))
-  
-  # find values in polar coords given angle and mag
-  xrot <- magsrot * cos(pi * theta2/180)
-  yrot <- magsrot * sin(pi * theta2/180)
-  
-}
-
-
 segments(xvals1, yvals1, xrot, yrot, col = 'blue') 
   
