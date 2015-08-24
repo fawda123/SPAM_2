@@ -1,4 +1,46 @@
 ######
+# rotate adcp vector to a direction
+#
+# dat_in input adcp data
+# theta direction to rotate (0/360 is north)
+#
+# requires tidyr
+vecrots <- function(dat_in, theta = 360){
+  
+  # bins to rotate (all)
+  bins <- length(grep('^Dir', names(dat_in)))
+  bins <- c(1:bins)
+  
+  # subset directions, mags by bins
+  dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))] %>% 
+    data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
+    gather('variable', 'value', -datetimestamp)
+  mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))] %>% 
+    data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
+    gather('variable', 'value', -datetimestamp)
+
+  # get diff of observed data from rotation angle
+  diffval <- dirs$value - theta
+  
+  # get magnitude of new vectors
+  magsrot <- mags$value * cos(pi * diffval/180)
+  
+  # organize output
+  mags$value <- magsrot
+  mags <- spread(mags, variable, value)
+  dirs$value <- theta
+  dirs <- spread(dirs, 'variable', 'value')
+  
+  # make like dat_in
+  out <- full_join(dirs, mags, by = 'datetimestamp') %>% 
+    mutate(Depth.mm. = dat_in$Depth.mm., deploy = dat_in$deploy)
+  out <- out[, names(dat_in)]
+  
+  return(out)
+  
+}
+
+######
 # plot adcp data
 #
 # Depths in plot are distance from surface based on input data
@@ -16,11 +58,11 @@
 # barmax upper axis limit on barplot
 # barcol vector of colors for bars on barplot
 # vec_scl scaling value for vector, for better viz
-
+#
 # requires ggplot2
 #
 plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5, 
-  z_bins = NULL, z_tot = 3.5, theta = 350, coord_lims = NULL, arrow = 0.2, barmin = 0, 
+  z_bins = NULL, z_tot = 3.5, theta = 360, coord_lims = NULL, arrow = 0.2, barmin = 0, 
   barmax = NULL, barcol = NULL, vec_scl = 5, ...){
     
   # defaults to first row of all_in 
