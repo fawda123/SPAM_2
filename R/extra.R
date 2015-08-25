@@ -1,59 +1,124 @@
-library(ggplot2)
+source('R/funcs.R')
+
 library(dplyr)
 library(tidyr)
+library(SWMPr)
 
 data(adcp_dat)
+data(pbay)
 
- 
-all_in <- adcp_dat
-bins <- 1
-val <- 39
-rng <- with(all_in, c(datetimestamp[val], datetimestamp[val + 12]))
+# rotate magnitude of each vector north/south (positive is north)
+rots <- vecrots(adcp_dat)
+tmp <- rots[, grepl('^Depth.mm.$|^datetimestamp$|^Mag', names(rots))] %>% 
+  mutate(Depth.mm. = c(NA, diff(Depth.mm.))) %>% 
+  rename(del_dep = Depth.mm.) %>% 
+  gather('bin', 'val', -del_dep, -datetimestamp) %>% 
+  mutate(bin = gsub('^Mag', 'Bin ', bin)) %>% 
+  filter(del_dep > -200 & del_dep < 190) # remove outliers
+
+ggplot(tmp, aes(x = del_dep, y = val)) +
+  geom_point() +
+  facet_wrap(~ bin, ncol = 4) +
+  theme_bw() + 
+  scale_x_continuous('Change in height (m)') + 
+  scale_y_continuous('North vector (m/s)') +
+  stat_smooth(method = 'lm', se = F)
   
+dist <- vecdist(rots, sepout = T)
 
-# subset data 
-nms_mag <- c('datetimestamp', paste0('Mag', bins))
-nms_dir <- gsub('^Mag', 'Dir', nms_mag)
-vec <- with(all_in, datetimestamp >= rng[1] & datetimestamp <= rng[2])
-toplo_mag <- all_in[vec, nms_mag]
-toplo_dir <- all_in[vec, nms_dir]
+# plot cumulative distances by bin
+toplo <- dist[['cdis']] %>% 
+  mutate(cDisnm = gsub('cDis', 'Bin', cDisnm))
 
-# long-form for plotting
-toplo_mag <- gather(toplo_mag, 'bin', 'mags', -datetimestamp) %>% 
-  mutate(bin =  gsub('^Mag', 'Bin', bin))
-toplo_dir <- gather(toplo_dir, 'bin', 'dirs', -datetimestamp) %>% 
-  mutate(bin = gsub('^Dir', 'Bin', bin))
-toplo <- full_join(toplo_mag, toplo_dir, by = c('datetimestamp', 'bin'))
+p1 <- ggplot(toplo, aes(x = datetimestamp, y = cDis)) + 
+  geom_point(size = 0.5) + 
+  facet_wrap(~ cDisnm, ncol = 1, scales = 'free_y') +
+  theme_bw() +
+  scale_y_continuous('Cumulative distance (m)')
 
-# change axis reference for directions
-toplo$dirs[toplo$dirs > 90] <- with(toplo, 360 - dirs[dirs > 90] + 90)
-toplo$dirs[toplo$dirs <= 90] <- with(toplo, 90 - dirs[dirs <= 90])
+toplo2 <- filter(toplo, datetimestamp <= datetimestamp[300] & datetimestamp >= datetimestamp[100])
 
-# x, y locs from polar coords
-xvals <- with(toplo, mags * cos(pi * dirs / 180))
-yvals <- with(toplo, mags * sin(pi * dirs / 180))
+p2 <- ggplot(toplo2, aes(x = datetimestamp, y = cDis)) + 
+  geom_line() + 
+  facet_wrap(~ cDisnm, ncol = 1, scales = 'free_y') +
+  theme_bw()  +
+  scale_y_continuous('Cumulative distance (m)')
 
+###
+# delta x/delta d related to do
 
-xvals1 <- 0
-yvals1 <- 0
-xvals2 <- xvals1 + xvals
-yvals2 <- yvals
-plot(c(-0.06, 0.06), c(-0.06, 0.06), type = 'n')
-points(0, 0)
-segments(xvals1, yvals1, xvals2, yvals2) 
-
-# angle to reproject
-theta <- 5
-
-# get diff of angle from vector and 180 plus vector
-diffval <- with(toplo, c(dirs - theta))
-
-# get magnitude of new vectors
-magsrot <- with(toplo, mags * cos(pi * diffval/180))
-
-# find values in polar coords given angle and mag
-xrot <- magsrot * cos(pi * theta/180)
-yrot <- magsrot * sin(pi * theta/180)
+delxt <- vecdist(rots, sepout = T)[[1]] %>% 
+  group_by(Disnm) %>% 
+  mutate(delxt = c(NA, diff(Dis))) %>% 
+  select(-Dis) %>% 
+  spread(Disnm, delxt) %>% 
+  data.frame
   
-segments(xvals1, yvals1, xrot, yrot, col = 'blue') 
+# load wqm_dat, get P05B
+data(wqm_dat)
+
+do_ts <- filter(wqm_dat, stat == 'P05-B') %>% 
+  select(datetimestamp, do_mgl) %>% 
+  na.omit
+
+dat <- comb(do_ts, delxt, date_col = 'datetimestamp', timestep = 120, method = 2) %>% 
+  mutate(
+    deldo = c(diff(do_mgl), NA)
+    ) %>% 
+  gather('bin', 'val', -datetimestamp, -do_mgl, -deldo) %>% 
+  mutate(bin = gsub('^Dis', 'Bin', bin))
+
+p3 <- ggplot(dat, aes(x = val, y = deldo)) +
+  geom_point() + 
+  facet_wrap(~ bin, scales = 'free') +
+  scale_y_continuous('Delta DO / Delta t (mg/L per two hours)') +
+  scale_x_continuous('Delta X / Delta t (m per two hours)') + 
+  theme_bw() +
+  stat_smooth(method = 'lm', se = F) + 
+  ggtitle('P05-B')
+
+group_by(dat, bin) %>% 
+  summarise(cors = cor(val, deldo, use = 'complete'))
+
+##
+# surface data
+
+delxt <- vecdist(rots, sepout = T)[[1]] %>% 
+  group_by(Disnm) %>% 
+  mutate(delxt = c(NA, diff(Dis))) %>% 
+  select(-Dis) %>% 
+  spread(Disnm, delxt) %>% 
+  data.frame
   
+# load wqm_dat, get P05B
+data(wqm_dat)
+
+do_ts <- filter(wqm_dat, stat == 'P05-S') %>% 
+  select(datetimestamp, do_mgl) %>% 
+  na.omit
+
+dat <- comb(do_ts, delxt, date_col = 'datetimestamp', timestep = 120, method = 2) %>% 
+  mutate(
+    deldo = c(diff(do_mgl), NA)
+    ) %>% 
+  gather('bin', 'val', -datetimestamp, -do_mgl, -deldo) %>% 
+  mutate(bin = gsub('^Dis', 'Bin', bin))
+
+p4 <- ggplot(dat, aes(x = val, y = deldo)) +
+  geom_point() + 
+  facet_wrap(~ bin, scales = 'free') +
+  scale_y_continuous('Delta DO / Delta t (mg/L per two hours)') +
+  scale_x_continuous('Delta X / Delta t (m per two hours)') + 
+  theme_bw() +
+  stat_smooth(method = 'lm', se = F) +
+  ggtitle('P05-S')
+
+group_by(dat, bin) %>% 
+  summarise(cors = cor(val, deldo, use = 'complete'))
+
+pdf('C:/Users/mbeck/Desktop/adcp_exp.pdf', family = 'serif')
+print(p1)
+print(p2)
+print(p3)
+print(p4)
+dev.off()

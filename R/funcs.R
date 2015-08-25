@@ -41,6 +41,58 @@ vecrots <- function(dat_in, theta = 360){
 }
 
 ######
+# get distance of parcels from adcp and cumulative distance travelled by bin
+# assumes you've run vecrots function above that converts vectors to the same axis
+# assumes a two hour timestep (7200 seconds)
+#
+# rots_in output data frame from vecrots above
+# timestep timestep interval in seconds for multiplying
+# sepout logical indicating if separate objects in long format are returned
+#
+# requires SWMPr, dplyr, tidyr
+#
+# returns new columns named Dis[1-9] and cDis[1-9] indicating distance travelled in each time step 
+# and cumulative distance, respectively, in meters.  Distance is integration of speed between steps
+# and is the distance the parcel has travelled within two hours
+vecdist <- function(rots_in, timestep = 7200, sepout = FALSE){
+  
+  # format the data
+  dat <- rots_in[, grep('^datetimestamp$|^Mag', names(rots_in))] %>% 
+    arrange(datetimestamp) %>% 
+    gather('bin', 'val', -datetimestamp) %>% 
+    group_by(bin) %>% 
+    mutate(
+      Dis = SWMPr::smoother(val, 2)[, 1] * timestep, # distance is integration of speed between steps
+      Disfill = approx(1:length(Dis), y = Dis, xout = 1:length(Dis))$y,
+      cDis = cumsum(Disfill),
+      Disnm = gsub('^Mag', 'Dis', bin), 
+      cDisnm = gsub('^Mag', 'cDis', bin)
+      )
+  
+  # distance data in long format
+  disdat <- ungroup(dat) %>% 
+    select(datetimestamp, Disnm, Dis) %>% 
+    as.data.frame
+
+  # cumulative distance data in long format
+  cdisdat <- ungroup(dat) %>% 
+    select(datetimestamp, cDisnm, cDis) %>% 
+    as.data.frame
+  
+  # output as list in long format
+  if(sepout) return(list(dis = disdat, cdis = cdisdat))
+
+  # combine both for output, wide format
+  cdisdat <- spread(cdisdat, cDisnm, cDis)
+  out <- spread(disdat, Disnm, Dis) %>%  
+    full_join(., cdisdat, by = 'datetimestamp') %>% 
+    as.data.frame
+
+  return(out)
+  
+}
+
+######
 # plot adcp data
 #
 # Depths in plot are distance from surface based on input data
