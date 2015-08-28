@@ -4,8 +4,8 @@ library(dygraphs)
 data(ctd_dat)
 ctd_dts <- as.character(sort(unique(ctd_dat$Date)))
 
-data(adcp_dat)
-adcp_dts <- unique(as.Date(adcp_dat$datetimestamp))
+data(adcp_datP)
+adcp_dts <- unique(as.Date(adcp_datP$datetimestamp))
 
 source('R/funcs.R')
 

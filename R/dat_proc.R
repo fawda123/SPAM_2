@@ -161,7 +161,130 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 # 
 # adcp_dat <- dat
 # save(adcp_dat, file = 'data/adcp_dat.RData')
+
+##
+# decompose adcp data into primary axis from eigenvectors
+# saved as adcp_datP
+
+data(adcp_dat)
+
+dat_in <- adcp_dat
+
+# bins to decompose (all)
+bins <- length(grep('^Dir', names(dat_in)))
+bins <- c(1:bins)
+  
+# subset directions, mags by bins
+dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))] %>% 
+  data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
+  gather('variable', 'value', -datetimestamp) %>% 
+  mutate(variable = gsub('^Dir', 'Bin', variable)) %>% 
+  rename(
+    bin = variable, 
+    dir = value
+    )
+mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))] %>% 
+  data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
+  gather('variable', 'value', -datetimestamp) %>% 
+  mutate(variable = gsub('^Mag', 'Bin', variable)) %>% 
+  rename(
+    bin = variable, 
+    mag = value
+    )
+# join the two
+dat <- full_join(dirs, mags, by = c('datetimestamp', 'bin'))
+
+# get diff of observed data from rotation angle
+diffN <- dat$dir - 360
+diffE <- dat$dir - 90
+  
+# get magnitude of new vectors
+dat$magsN <- dat$mag * cos(pi * diffN/180)
+dat$magsE <- dat$mag * cos(pi * diffE/180)
+
+##
+#get  angle of primary
+
+# get vector along primary
+dat <- split(dat, dat$bin)
+rots <- lapply(dat, function(x){
+  
+  # eigen decomp
+  eig <- eigen(cov(na.omit(x[, c('magsN', 'magsE')])))
+  
+  # vector of primary
+  vecs <- eig$vectors
+  x$angs <- atan(vecs[2, 1]/vecs[1, 1]) * 180/pi
+  
+  # get magnitude along primary axis (use original vector)
+  diffval <- x$dir - x$angs
+  x$magsP <- x$mag * cos(pi * diffval/180)
+  
+  return(x)
+
+}) 
+
+dat <- do.call('rbind', rots)
+rownames(dat) <- 1:nrow(dat)
+
+# add pressure/height data from adcp_dat (repeated across bins)
+hghts <- dat_in[, grep('datetimestamp|Dir|Depth', names(dat_in))] %>% 
+  gather('variable', 'value', -datetimestamp, -Depth.mm.) %>% 
+  mutate(variable = gsub('^Dir', 'Bin', variable)) %>% 
+  rename(
+    bin = variable, 
+    dir = value
+    ) %>% 
+  select(datetimestamp, bin, Depth.mm.)
+
+dat <- full_join(dat, hghts, by = c('datetimestamp', 'bin'))
+adcp_datP <- dat
+save(adcp_datP, file = 'data/adcp_datP.RData')
+
+# ######
+# # plot  
+# plot_adcp(all_in = dat, shp_in = pbay, loc_in = c(-87.13208, 30.45682), 
+#   fixed_y = FALSE)
 # 
+# ######
+# # plot the eigenvectors 
+# 
+# dat <- split(adcp_datP, adcp_datP$bin)
+# eigs <- lapply(dat, function(x){
+#   mats <- cov(na.omit(x[, c('magsN', 'magsE')]))
+#   eigen(mats)
+#   }) 
+# 
+# par(mfrow = c(2, 4))
+# 
+# for(i in 1:8){
+#   
+#   toplo <- data.frame(dat[[i]][, c('magsN', 'magsE')])
+#   
+#   eigens <- eigs[[i]]
+#   evecs <- eigens$vectors
+#   evs <- sqrt(eigens$values)
+#   
+#   a <- evs[1]
+#   b <- evs[2]
+#   x0 <- 0
+#   y0 <- 0
+#   
+#   alpha <- atan(evecs[ , 1][2] / evecs[ , 1][1])
+#   theta <- seq(0, 2 * pi, length=(1000))
+#   
+#   x <- x0 + a * cos(theta) * cos(alpha) - b * sin(theta) * sin(alpha)
+#   y <- y0 + a * cos(theta) * sin(alpha) + b * sin(theta) * cos(alpha)
+#   
+#   plot(magsN ~ magsE, data = toplo, asp = 1, main = paste0('Bin ', i))
+#   lines(y, x, col = 'green')
+#   abline(0, evecs[, 1][1]/evecs[, 1][2], col = 'blue')
+#   abline(0, evecs[, 2][1]/evecs[, 2][2], col = 'blue')
+#   segments(0, 0, -1* a * evecs[ , 1][2], -1 * a * evecs[ , 1][1], col = 'red')
+#   segments(0, 0, b * evecs[ , 2][2], b * evecs[ , 2][1], col = 'red')
+# 
+# }
+
 ######
 # PAR
 

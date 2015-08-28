@@ -114,11 +114,17 @@ vecdist <- function(rots_in, timestep = 7200, sepout = FALSE){
 # requires ggplot2
 #
 plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5, 
-  z_bins = NULL, z_tot = 3.5, theta = 360, coord_lims = NULL, arrow = 0.2, barmin = 0, 
+  z_bins = NULL, z_tot = 3.5, coord_lims = NULL, arrow = 0.2, barmin = 0, 
   barmax = NULL, barcol = NULL, vec_scl = 5, ...){
     
-  # defaults to first row of all_in 
-  if(is.null(dat_in)) dat_in <- all_in[1, ]
+  # defaults to time of first obs
+  if(is.null(dat_in)){
+    sel <- all_in$datetimestamp %in% unique(all_in$datetimestamp)[1]
+    dat_in <- all_in[sel, ]
+  }
+  
+  # subset by bins
+  dat_in <- dat_in[dat_in$bin %in% paste0('Bin', bins), ]
   
   # get depth of bins in relation to surface
   if(is.null(z_bins)){
@@ -126,12 +132,10 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
     z_bins <- z_tot - z_bins
   }
   
-  # subset directions, mags by bins
-  dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))]
-  dirs <- as.numeric(dirs)
-  mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))]
-  mags <- as.numeric(mags) * vec_scl
-
+  # dir , mag
+  dirs <- dat_in$dir
+  mags <- dat_in$mag
+  
   # get barrng from data if not supplied
   if(is.null(barmax)) barmax <- max(mags)
   
@@ -156,18 +160,13 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
   
   # theta input is zero north, running clockwise
   # have to change reference for trig funcs
-  if(theta > 90) theta <- 360 - theta + 90
-  else theta <- 90 - theta
-  
-  # get diff of observed data from rotation angle
-  diffval <- dirs - theta
-  
-  # get magnitude of new vectors
-  magsrot <- mags * cos(pi * diffval/180)
+  theta <- dat_in$angs
+  theta[theta > 90] <- 360 - theta[theta > 90] + 90
+  theta[theta <= 90] <- 90 - theta[theta <= 90]
   
   # find values in polar coords given angle and mag
-  xrot <- magsrot * cos(pi * theta/180)
-  yrot <- magsrot * sin(pi * theta/180)
+  xrot <- with(dat_in, magsP * cos(pi * theta/180))
+  yrot <- with(dat_in, magsP * sin(pi * theta/180))
 
   # setup plot data
   bin_labs <- paste('Bin', paste(bins, z_bins, sep = ': '), 'm') 
@@ -181,7 +180,7 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
     bins = bin_labs,
     z_bins = z_bins,
     mags = mags,
-    magsrot = magsrot
+    magsP = dat_in$magsP
     )
   vecs$bins <- factor(vecs$bins, levels = rev(bin_labs))
   loc_in <- data.frame(long = loc_in[1], lat = loc_in[2])
@@ -254,6 +253,11 @@ plot_press <- function(dat_in, all_in, win = NULL, fixed_y = TRUE){
   # window defaults to one day
   if(is.null(win))
     win <- 60 * 60 * 24
+  
+  # subset by one bin (depth is repeated for each bin)
+  binsel <- unique(all_in$bin)[1]
+  dat_in <- dat_in[dat_in$bin %in% binsel, ]
+  all_in <- all_in[all_in$bin %in% binsel, ]
   
   # x limits of plot from window
   lims <- with(dat_in, c(datetimestamp - win, datetimestamp + win))
