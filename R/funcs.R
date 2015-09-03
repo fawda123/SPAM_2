@@ -646,7 +646,7 @@ ctd_plot2 <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dep
   axis(side = 2, at = y.axs, labels = abs(y.axs))
   
   # top
-  axis(side = 3, at = top$dist, labels = top$Station, cex.axis = 0.5,
+  axis(side = 3, at = top$dist, labels = top$Station, cex.axis = 0.7,
     tick = F, line = -1)
   
   # masking depth

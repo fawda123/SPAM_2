@@ -500,10 +500,10 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 ######
 # CTD
 
-# # # copy files from L drive
-# # fls <- list.files('L:/lab/SPAM2/CTD/Processing', 'CTD.*\\.xls', recursive = T, full.names = TRUE)
-# # fls <- grep('dy\\.xls$', fls, value = T, invert = T)
-# # file.copy(fls, 'M:/docs/SPAM_2/ignore/')
+# # copy files from L drive
+# fls <- list.files('L:/lab/SPAM2/CTD/Processing', 'CTD.*\\.xls', recursive = T, full.names = TRUE)
+# fls <- grep('dy\\.xls$', fls, value = T, invert = T)
+# file.copy(fls, 'M:/docs/SPAM_2/ignore/')
 # 
 # # get all
 # fls <- list.files('ignore/', '^CTD', full.names = TRUE)
@@ -526,7 +526,7 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 # row.names(dat) <- 1:nrow(dat)
 # ctd_dat <- form_dat(dat)
 # ctd_dat <- arrange(ctd_dat, Date, Station, Depth)
-#
+# 
 # save(ctd_dat, file = 'data/ctd_dat.RData')
 
 ##
