@@ -10,7 +10,7 @@ vecrots <- function(dat_in, theta = 360){
   # bins to rotate (all)
   bins <- length(grep('^Dir', names(dat_in)))
   bins <- c(1:bins)
-  
+
   # subset directions, mags by bins
   dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))] %>% 
     data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
@@ -70,7 +70,7 @@ vecdist <- function(dat_in, timestep = 7200, sepout = FALSE){
 }
 
 ######
-# plot adcp data
+# plot adcp data, shows observed vector and rotated based on principal axis, uses adcp_datP
 #
 # Depths in plot are distance from surface based on input data
 #
@@ -256,6 +256,91 @@ plot_press <- function(dat_in, all_in, win = NULL, fixed_y = TRUE){
   
   return(p1)
   
+}
+
+######
+# plot adcp data, same as plot_adcp but only shows raw vectors, I copied this because I'm lazy
+#
+# Depths in plot are distance from surface based on input data
+#
+# dat_in input row to plot
+# all_in all adcp data
+# shp_in SpatialPolygonsDataFrame input for map
+# loc_in location of ADCP in reference to shp_in
+# bins depth bins to plot
+# z_bins depth (m) of each bin (bin 1 is the bottom), defaults to 0.5 meter spacing with the first at 1m from the transducer (from report, transducer is assumed to be the bottom), reported as depth from surface on the plot in reference to the total depth
+# z_tot total depth of location (m)
+# coord_lims list of constraining x, y locations for plotting shp_in
+# arrow end of arrow size
+# vec_scl scaling value for vector, for better viz
+#
+# requires ggplot2
+#
+plot_adcpraw <- function(dat_in, shp_in, loc_in, bins = 1:5, bin_labs = NULL, 
+  z_bins = NULL, z_tot = 3.5, coord_lims = NULL, arrow = 0.2, vec_scl = 1, ...){
+
+  # subset by bins
+  dat_in <- dat_in[, grepl(paste(c('datetimestamp', bins), collapse = '|'), names(dat_in))]
+  
+  # get depth of bins in relation to surface
+  if(is.null(z_bins)){
+    z_bins <- cumsum(c(1, rep(0.5, length = length(bins) - 1)))
+    z_bins <- z_tot - z_bins
+  }
+  
+  # dir , mag
+  dirs <- as.numeric(dat_in[, grepl('^Dir', names(dat_in))])
+  mags <- as.numeric(dat_in[, grepl('^Mag', names(dat_in))])
+  # colors of directions, based on angle
+  dircol <- rainbow(360)[round(1 + dirs)] # min direction is zero
+  
+  # change axis reference for directions
+  dirs[dirs > 90] <- 360 - dirs[dirs > 90] + 90
+  dirs[dirs <= 90] <- 90 - dirs[dirs <= 90]
+  
+  # x, y locs from polar coords
+  xvals <- vec_scl * mags * cos(pi * dirs / 180)
+  yvals <- vec_scl * mags * sin(pi * dirs / 180) 
+
+  # setup plot data
+  if(is.null(bin_labs))
+    bin_labs <- paste('Bin', paste(bins, z_bins, sep = ': '), 'm') 
+  vecs <- data.frame(
+    long1 = loc_in[1], 
+    lat1 = loc_in[2],
+    long2 = xvals + loc_in[1], 
+    lat2 = yvals + loc_in[2],
+    bins = bin_labs,
+    z_bins = z_bins
+    )
+  vecs$bins <- factor(vecs$bins, levels = rev(bin_labs))
+  loc_in <- data.frame(long = loc_in[1], lat = loc_in[2])
+  
+  # dir plot
+  p1 <- suppressMessages({ggplot(loc_in, aes(x = long, y = lat)) + 
+    coord_fixed(xlim = bbox(shp_in)[1, ], ylim = bbox(shp_in)[2, ]) + 
+    geom_polygon(data = shp_in, aes(x = long, y = lat, group = group), 
+      fill = 'lightgrey') +
+    geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2, colour = bins), 
+      size = 1.5, alpha = 0.6) +
+    geom_point() +
+    scale_colour_manual(values = dircol) + 
+    theme_classic() + 
+    theme(legend.position = 'none') +
+    xlab('Long') +
+    ylab('Lat') + 
+    facet_wrap(~ bins, ncol = 1)
+  })
+  
+  # constrain plot boundaries
+  if(!is.null(coord_lims))
+    p1 <- p1 + coord_map(
+      xlim = coord_lims[[1]],
+      ylim = coord_lims[[2]]
+    )
+
+  return(p1)
+ 
 }
 
 ######
