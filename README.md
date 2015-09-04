@@ -1,0 +1,18 @@
+
+## README
+
+`adcp_dat.RData`: ADCP data from P05
+
+`adcp_datP.RData`: reprocessed version of `acdp_dat.RData` in long format that also includes columns for E/N magnitude vectors and angle angle and magnitude of principal component axis
+
+`ctd_dat.RDAta`: CTD monthly casts along tidal axis
+
+`depth_tran.RData`: metadata for depth transect along tidal axis of Escambia bay, distance and depth
+
+`met_dat.RData`: metabolism estimates for P02, P05-S, P05-B
+
+`pbay.RData`: spatial polygon data frame for Pensacola Bay
+
+`wqm_dat.RData`: data from water quality monitors at P02, P05-S, PO5-B
+
+`wx_dat.RData`: supplementary weather data from PNS
