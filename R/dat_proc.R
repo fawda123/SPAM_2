@@ -548,3 +548,18 @@ ctd_dat[sel, 'Fluor'] <- 1.2711
 ctd_dat[sel, 'Turb'] <- 2.1999093
 
 save(ctd_dat, file = 'data/ctd_dat.RData')
+
+######
+# flow data from Escambia river at Molino 02376033
+# http://waterdata.usgs.gov/nwis/sw
+# dischargs is column 00060_00003, daily mean as cfs
+
+flo_dat <- read.table('ignore/flow.txt', sep = '\t', header = T)
+flo_dat <- flo_dat[, c(3, 4)] 
+names(flo_dat) <- c('Date', 'discharge')
+
+# convert date, change cfs to cms
+flo_dat$Date <- as.Date(as.character(flo_dat$Date), format = '%Y-%m-%d')
+flo_dat$discharge <- as.numeric(as.character(flo_dat$discharge)) * 0.0283168
+
+save(flo_dat, file = 'data/flo_dat.RData')
