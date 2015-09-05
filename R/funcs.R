@@ -577,8 +577,13 @@ get_rngs <- function(dat_in){
 # 'rngs_in' is output from 'get_rngs' above
 # 'num_levs' is number of contours
 # 'xlab' and 'ylab' are for axis labels
-ctd_plot2 <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Depth (m)',
-  xlab = 'Channel distance from P01 to P09 (km)'){
+# 'var_lab' logical for variable text on plot
+# 'cols' colors to use, passed to colorRampPalette
+# 'ncol' number for smoothing colors in plot
+ctd_plot <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Depth (m)',
+  xlab = 'Channel distance from P01 to P09 (km)', var_lab = TRUE, 
+  cols = c('tomato', 'lightblue', 'lightgreen','green'),
+  ncol = 100){
 
   library(scales)
   library(zoo)
@@ -657,9 +662,6 @@ ctd_plot2 <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dep
   # number of contours
   levs <- num_levs
   
-  # colors for plotting
-  in.col <- colorRampPalette(c('tomato', 'lightblue', 'lightgreen','green'))
-  
   # mask z.val so correct col contours show up
   mask_grd <- sapply(1:num_int,
     function(x){
@@ -682,11 +684,14 @@ ctd_plot2 <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dep
   # plot margins
   par(new = "TRUE",plt = c(0.15,0.85,0.3,0.9),las = 1,cex.axis = 1)
   
+  # color function
+  in_col <- colorRampPalette(cols)
+  
   # contour plot with isolines
   filled.contour3(x = x.val, y = y.val, z = rotate(z.val),
-    color.palette=in.col,
-    ylab=ylab, xlab='',
-    nlevels=100, # for smoothed colors
+    color.palette = in_col,
+    ylab = ylab, xlab='',
+    nlevels = ncol, # for smoothed colors
     axes = F)
   contour(x = x.val, y = y.val, z = rotate(z.val), nlevels=levs,
     axes = F, add = T)
@@ -717,149 +722,31 @@ ctd_plot2 <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dep
     polygon(
       c(poly.x, rev(poly.x)), 
       c(mllw_m, rep(min(mllw_m), length(mllw_m))), 
-      col = alpha('grey', 1)
+      col = alpha('grey', 1), 
+      border = NA
       ))
   
   ##
   # variable name -lower left
-  text(x = par('usr')[1], par('usr')[3] + 1, labels = var_plo, pos = 4, 
-    cex = 1.5)
+  if(var_lab)
+    text(x = par('usr')[1], par('usr')[3] + 1, labels = var_plo, pos = 4, 
+      cex = 1.5)
   
   box()
   
   ##
   # legend
   par(new = "TRUE", plt = c(0.87,0.91,0.3,0.9),las = 1,cex.axis = 1)
-  filled.legend(x.val,y.val,rotate(z.val),color=in.col,xlab = "",
+  filled.legend(x.val,y.val,rotate(z.val),color=in_col,xlab = "",
     nlevels = levs,
     ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
     ylim = c(min(z.val),max(z.val)))
-  filled.legend(x.val,y.val,rotate(z.val),color=in.col,xlab = "",
+  filled.legend(x.val,y.val,rotate(z.val),color=in_col,xlab = "",
     nlevels = levs,
     ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
     ylim = c(min(z.val),max(z.val)))
   
   }
-
-######
-# create contour plots for CTD data, via kriging
-# input 'dat_in' is output from 'form_dat'
-# 'var_plo' is variable to plot, e.g., 'Temp'
-# 'num_levs' is number of contours
-ctd_plot <- function(dat_in, var_plo, num_levs = 8){
-  
-  library(scales)
-  library(geoR)
-  library(gstat)
-  library(reshape2)
-  
-  # for matrix rotation, otherwise plot is not correct
-  rotate <- function(x) t(apply(x, 2, rev))
-  
-  # number of kriging points as row or column to interp, value is squared 
-  num_krig <- 100
-  
-  # get relevant data from input, convert units for some
-  dat_in <- dat_in[, c('Station', 'Depth', var_plo, 'dist')]
-  dat_in$Depth <- -1 * dat_in$Depth
-  dat_in$dist <- dat_in$dist * 1.6093
-  
-  # maximum depth of data for each statoin, used for polygon masking
-  # value is linearly interpolated to increase samp
-  maxd <- aggregate(Depth ~ Station, dat_in, min)$Depth
-  maxd <- approx(maxd, n = num_krig)$y
-  
-  # coords for plot
-  x.val <- seq(0, max(dat_in$dist), length = num_krig)
-  y.val <- seq(0, min(dat_in$Depth), length = num_krig)
-  
-  # grid to interpolate
-  new_pts <- expand.grid(x.val, y.val)
-  
-  # kriging values to interpolate
-  var.mod <- variogram(list(dat_in[, var_plo]), list(dat_in$dist, dat_in$Depth), 
-    cutoff = 40)
-  nug <- max(var.mod$gamma)/2  # intercept of sph mod
-  rng <- max(var.mod$dist) # distance between points at which semivar asymps
-  sil <- max(var.mod$gamma) # semivar value at which semivar asymps, mean works better than max
-  
-  # get interpolation predictions
-  conts <- krige.control(type.krige="ok", cov.model="spherical",
-    cov.pars=c(sil, rng), nugget = nug)
-  preds <- krige.conv(
-    coords = as.matrix(dat_in[,c('dist', 'Depth')]),
-    data = dat_in[, var_plo],
-    locations = new_pts,
-    krige = conts, output = list(messages = F))
-  dat_kr <- data.frame(new_pts, val = preds$predict)
-  
-  # interpolation matrix in format for plotting, rev y.vals
-  z.val <- matrix(dat_kr$val, byrow = T, nrow = num_krig)
-  y.val <- sort(y.val)
-  
-  ##
-  # start plot
-  plot.new()
-  
-  # number of contours
-  levs <- num_levs
-  
-  in.col <- colorRampPalette(c('green','lightgreen','blue'))
-  
-  # mask z.val so correct col contours showup
-  mask_grd <- sapply(1:num_krig,
-    function(x){
-      out <- rep(NA, num_krig)
-      out[rev(y.val) >= (maxd[x]-0.5)] <- 1
-      out}
-  )
-  z.val <- ifelse(mask_grd, z.val, NA)
-  
-  # plot margins
-  par(new = "TRUE",plt = c(0.15,0.85,0.3,0.9),las = 1,cex.axis = 1)
-  
-  # contour plot with isolines
-  filled.contour3(x = x.val, y = y.val, z = rotate(z.val),
-    color.palette=in.col,
-    ylab='Depth (m)', xlab='Channel distance from P01 to P09 (km)',
-    nlevels=100, # for smoothed colors
-    axes = F)
-  contour(x = x.val, y = y.val, z = rotate(z.val), nlevels=levs,
-    axes = F, add = T)
-  
-  ##
-  # axes
-  box()
-  
-  # x
-  axis(side = 1)
-  
-  # y
-  y.axs <- axTicks(2, par('yaxp'))
-  axis(side = 2, at = y.axs, labels = abs(y.axs))
-  
-  # top
-  top <- unique(dat_in[, c('Station', 'dist')])
-  axis(side = 3, at = top$dist, labels = top$Station, cex.axis = 0.5,
-    tick = F, line = -1)
-  
-  # masking depth
-  polygon(c(x.val, rev(x.val)), c(maxd, rep(min(y.val), length(maxd))), 
-    col = 'grey')
-  
-  ##
-  # legend
-  par(new = "TRUE",plt = c(0.87,0.91,0.3,0.9),las = 1,cex.axis = 1)
-  filled.legend(x.val,y.val,rotate(z.val),color=in.col,xlab = "",
-    nlevels = levs,
-    ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
-    ylim = c(min(z.val),max(z.val)))
-  filled.legend(x.val,y.val,rotate(z.val),color=in.col,xlab = "",
-    nlevels = levs,
-    ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
-    ylim = c(min(z.val),max(z.val)))
-
-}
 
 ######
 # plotting functions (not mine)

@@ -136,5 +136,23 @@ dat$magsP <- dat$mag * cos(pi * diffval/180)
 # }
 # dev.off()
 
+######
+# match ctd dates with flow
 
+data(ctd_dat)
+data(flo_dat)
 
+# split ctd by dates, get unique dates
+ctd <- split(ctd_dat, ctd_dat$Date)
+
+uni_dts <- unique(ctd_dat$Date)
+ggplot(flo_dat, aes(x = Date, y = discharge)) + 
+  geom_line() + 
+  scale_y_continuous('Disharge (m3/s)') + 
+  geom_vline(xintercept = as.numeric(uni_dts), linetype = 'dashed') + 
+  theme_classic() + 
+  theme(axis.title.x = element_blank())
+
+ctd_plot(ctd[[2]], var_plo = 'Salinity', cols = c('darkgreen', 'blue'))
+
+ctd_plot

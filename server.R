@@ -160,7 +160,7 @@ shinyServer(function(input, output, session) {
   output$ctd1plot1 <- renderPlot({
 
     ctdsel <- input$ctd1
-    ctd_plot2(ctd1(), ctdsel)
+    ctd_plot(ctd1(), ctdsel)
     
     })
 
@@ -168,7 +168,7 @@ shinyServer(function(input, output, session) {
   output$ctd1plot2 <- renderPlot({
 
     ctdsel <- input$ctd2
-    ctd_plot2(ctd1(), ctdsel)
+    ctd_plot(ctd1(), ctdsel)
     
     })
 
@@ -176,7 +176,7 @@ shinyServer(function(input, output, session) {
   output$ctd1plot3 <- renderPlot({
     
     ctdsel <- input$ctd3
-    ctd_plot2(ctd1(), ctdsel)
+    ctd_plot(ctd1(), ctdsel)
     
     })
   
@@ -184,7 +184,7 @@ shinyServer(function(input, output, session) {
   output$ctd1plot4 <- renderPlot({
      
     ctdsel <- input$ctd4
-    ctd_plot2(ctd1(), ctdsel)
+    ctd_plot(ctd1(), ctdsel)
     
     })
   
@@ -195,7 +195,7 @@ shinyServer(function(input, output, session) {
   output$ctd2plot1 <- renderPlot({
     
     toplo <- ctd2()[[1]]
-    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    ctd_plot(toplo, input$ctd2sel, rngs_in = rngs())
     
     })
 
@@ -203,7 +203,7 @@ shinyServer(function(input, output, session) {
   output$ctd2plot2 <- renderPlot({
 
     toplo <- ctd2()[[2]]
-    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    ctd_plot(toplo, input$ctd2sel, rngs_in = rngs())
     
     })
 
@@ -211,7 +211,7 @@ shinyServer(function(input, output, session) {
   output$ctd2plot3 <- renderPlot({
 
     toplo <- ctd2()[[3]]
-    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    ctd_plot(toplo, input$ctd2sel, rngs_in = rngs())
     
     })
   
@@ -219,7 +219,7 @@ shinyServer(function(input, output, session) {
   output$ctd2plot4 <- renderPlot({
 
     toplo <- ctd2()[[4]]
-    ctd_plot2(toplo, input$ctd2sel, rngs_in = rngs())
+    ctd_plot(toplo, input$ctd2sel, rngs_in = rngs())
     
     })
   
