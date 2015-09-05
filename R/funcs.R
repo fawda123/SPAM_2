@@ -572,7 +572,7 @@ get_rngs <- function(dat_in){
 
 ######
 # create contour plots for CTD data, linear interpolation
-# input 'dat_in' is output from 'form_dat'
+# input 'dat_in' is one date of ctd data along the tidal axis
 # 'var_plo' is variable to plot, e.g., 'Temp'
 # 'rngs_in' is output from 'get_rngs' above
 # 'num_levs' is number of contours

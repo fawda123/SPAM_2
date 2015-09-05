@@ -140,19 +140,31 @@ dat$magsP <- dat$mag * cos(pi * diffval/180)
 # match ctd dates with flow
 
 data(ctd_dat)
-data(flo_dat)
+data(flo_dat) # do ten day mwa
+
+library(CTDplot)
+library(ggplot2)
+library(SWMPr)
 
 # split ctd by dates, get unique dates
 ctd <- split(ctd_dat, ctd_dat$Date)
 
+# add mw smoother 
+flo_dat$discharge_ave <- smoother(flo_dat, window = 10, sides = 1)[, 2]
+flo_dat <- tidyr::gather(flo_dat, 'variable', 'value', -Date)
+
 uni_dts <- unique(ctd_dat$Date)
-ggplot(flo_dat, aes(x = Date, y = discharge)) + 
+ggplot(flo_dat, aes(x = Date, y = value, group = variable, colour = variable)) + 
   geom_line() + 
   scale_y_continuous('Disharge (m3/s)') + 
   geom_vline(xintercept = as.numeric(uni_dts), linetype = 'dashed') + 
   theme_classic() + 
-  theme(axis.title.x = element_blank())
+  theme(axis.title.x = element_blank(), legend.position = 'top')
 
-ctd_plot(ctd[[2]], var_plo = 'Salinity', cols = c('darkgreen', 'blue'))
-
-ctd_plot
+# selected dates
+# low, med, high flow
+# 2014-10-15, 2015-04-29, 204-05-13 (8, 14, 2)
+sel_dts <- as.character(uni_dts[c(8, 14, 2)])
+sel <- names(ctd) %in% sel_dts
+ctd_plotmult(ctd[sel_dts], var_plo = 'Salinity')
+ctd_plotmult(ctd[sel_dts], var_plo = 'DO')
