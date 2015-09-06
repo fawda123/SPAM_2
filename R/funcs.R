@@ -520,7 +520,7 @@ form_dat <- function(dat.in){
   # cumulative distance for each station
   sta_lens <- data.frame(
     Station = paste0('P0', seq(1,9)),
-    dist = cumsum(
+    dist = 1.60934 * cumsum( # as km
       c(0, 2.588, 2.022, 1.711, 2.571, 3.076, 4.233, 3.656, 3.913))
   )
   
@@ -811,7 +811,7 @@ ctd_bott <- function(dat_in, num_levs = 8, ylab = 'Axial distance (km)',
     axes = F, add = T)
   
   # axis labels
-  axis(side = 2, at = -1 * seq(0, 20, by = 5), labels = seq(0, 20, by = 5))
+  axis(side = 2, at = -1 * seq(0, 35, by = 5), labels = seq(0, 35, by = 5))
   axis.Date(side = 3, x = as.Date(x.val), format = '%m-%Y')
   axis(side = 1, at = uni_dts, labels = uni_dts, tick = F, cex.axis = 0.5, las = 2, line = -0.5)
   axis(side = 4, at = -1 * rev(dists), labels = rev(unique(dat_in$Station)), tick = F, 

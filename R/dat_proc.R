@@ -455,35 +455,35 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 
 ######
 # CTD
-
+# 
 # # copy files from L drive
 # fls <- list.files('L:/lab/SPAM2/CTD/Processing', 'CTD.*\\.xls', recursive = T, full.names = TRUE)
 # fls <- grep('dy\\.xls$', fls, value = T, invert = T)
 # file.copy(fls, 'M:/docs/SPAM_2/ignore/')
 # 
-# # get all
-# fls <- list.files('ignore/', '^CTD', full.names = TRUE)
-# 
-# dat <- vector('list', length(fls))
-# names(dat) <- fls
-# for(fl in fls){
-#   
-#   cat(fl, '\n')
-#   
-#   # import
-#   tmp <- read_excel(fl, sheet = 'forAccess')
-#   tmp <- tmp[, !grepl('LAYER|PAR|^N$|^RSQ$|pH', names(tmp))]
-#   
-#   dat[[fl]] <- data.frame(tmp)
-#   
-# }
-# 
-# dat <- do.call('rbind', dat)
-# row.names(dat) <- 1:nrow(dat)
-# ctd_dat <- form_dat(dat)
-# ctd_dat <- arrange(ctd_dat, Date, Station, Depth)
-# 
-# save(ctd_dat, file = 'data/ctd_dat.RData')
+# get all
+fls <- list.files('ignore/', '^CTD', full.names = TRUE)
+
+dat <- vector('list', length(fls))
+names(dat) <- fls
+for(fl in fls){
+  
+  cat(fl, '\n')
+  
+  # import
+  tmp <- read_excel(fl, sheet = 'forAccess')
+  tmp <- tmp[, !grepl('LAYER|PAR|^N$|^RSQ$|pH', names(tmp))]
+  
+  dat[[fl]] <- data.frame(tmp)
+  
+}
+
+dat <- do.call('rbind', dat)
+row.names(dat) <- 1:nrow(dat)
+ctd_dat <- form_dat(dat)
+ctd_dat <- arrange(ctd_dat, Date, Station, Depth)
+
+save(ctd_dat, file = 'data/ctd_dat.RData')
 
 ##
 # additional ctd post-processing to remove bogus data

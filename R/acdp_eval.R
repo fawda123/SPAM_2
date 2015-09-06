@@ -151,9 +151,6 @@ library(gridExtra)
 library(tidyr)
 source('R/funcs.R')
 
-# split ctd by dates, get unique dates
-ctd <- split(ctd_dat, ctd_dat$Date)
-
 # date ranges from wqm
 rngs <- as.Date(range(wqm_dat$datetimestamp, na.rm = T))
 
@@ -168,7 +165,7 @@ flo_dat <- filter(flo_dat, rngs[1] <= Date & Date <= rngs[2])
 
 p1 <- ggplot(flo_dat, aes(x = Date, y = discharge, colour = levels)) + 
   geom_line(aes(group = 1), size = 1) + 
-  scale_y_continuous('10 day mean disharge (m3/s)') + 
+  scale_y_continuous('10 day mean discharge (m3/s)') + 
   scale_colour_manual(values = RColorBrewer::brewer.pal(9, 'Set1')[c(1:3)]) + 
   geom_vline(xintercept = as.numeric(uni_dts), linetype = 'dashed') + 
   theme_classic() + 
@@ -189,17 +186,20 @@ p2 <- ggplot(do_dat, aes(x = datetimestamp, y = do_daily, colour = cols)) +
   theme_classic() + 
   theme(axis.title.x = element_blank(), legend.position = 'top', legend.title = element_blank())
 
-##
-# get bottom DO at each station for all dates in ctd data
-# make in grid format of dist by date for interp
-ctd_bott(ctd_dat, num_levs = 7)
-
+# plots
+pdf('C:/Users/mbeck/Desktop/hypox_plots.pdf', height = 5, width = 10, family = 'serif')
+ctd_bott(ctd_dat, num_levs = 10, ncol = 10)
 grid.arrange(p1, p2, ncol = 1)
+dev.off()
 
 # selected dates
 # low, med, high flow
 # 2014-10-15, 2015-04-29, 204-05-13 (8, 14, 2)
-sel_dts <- as.character(uni_dts[c(8, 14, 2)])
+
+# split ctd by dates, get unique dates
+ctd <- split(ctd_dat, ctd_dat$Date)
+
+sel_dts <- names(ctd)[c(8, 14, 2)]
 sel <- names(ctd) %in% sel_dts
-ctd_plotmult(ctd[sel_dts], var_plo = 'Salinity')
-ctd_plotmult(ctd[sel_dts], var_plo = 'DO')
+ctd_plotmult(ctd[sel_dts], var_plo = 'Salinity', var_labs = sel_dts)
+ctd_plotmult(ctd[sel_dts], var_plo = 'DO', var_labs = sel_dts)
