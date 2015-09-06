@@ -192,57 +192,7 @@ p2 <- ggplot(do_dat, aes(x = datetimestamp, y = do_daily, colour = cols)) +
 ##
 # get bottom DO at each station for all dates in ctd data
 # make in grid format of dist by date for interp
-do_mat <- select(ctd_dat, Station, Date, Depth, DO, dist) %>% 
-  group_by(Station, Date) %>% 
-  mutate(maxd = max(Depth, na.rm = T)) %>% 
-  filter(Depth == maxd) %>%
-  ungroup %>% 
-  select(Date, dist, DO) %>% 
-  spread(Date, DO) %>% 
-  data.frame
-  
-# interp for plot
-
-# first create new grid
-uni_dts <- sort(unique(ctd_dat$Date))
-dists <- unique(ctd_dat$dist)
-num_int <- 200
-new_grd <- expand.grid(
-    approx(dists, n = num_int)$y, 
-    approx(uni_dts, n = num_int)$y
-    )
-
-# then interp
-int_val <- fields::interp.surface(
-  obj = list(  
-    x = dists, 
-    y = uni_dts, 
-    z = do_mat[,-1]), 
-  loc = new_grd
-  )
-do_mat <- cbind(new_grd, int_val)
-names(do_mat) <- c('Distance', 'Date', 'DO')
-do_mat <- spread(do_mat, Date, DO)
-x.val <- as.numeric(names(do_mat)[-1])
-y.val <- do_mat$Distance
-z.val <- as.matrix(do_mat[, -1])
-cols <- RColorBrewer::brewer.pal(9, 'Set1')[c(1:3)]
-in_col <- colorRampPalette(cols)
-rotate <- function(x) t(apply(x, 2, rev))
-
-# contour plot with isolines
-filled.contour3(x = x.val, y = y.val, z = t(z.val),
-  color.palette = in_col,
-  nlevels = 8, # for smoothed colors
-  axes = F)
-contour(x = x.val, y = y.val, z = t(z.val), nlevels= 8,
-  axes = F, add = T)
-# axis labels
-axis(side = 2)
-axis.Date(side = 3, x = as.Date(x.val), format = '%m-%Y')
-axis.Date(side = 1, x = as.Date(x.val), at = uni_dts, labels = F, lwd.ticks = 2, col = 'grey')
-axis(side = 4, at = unique(ctd_dat$dist), labels = unique(ctd_dat$Station), tick = F, col = 'grey', cex.axis = 0.6, las = 1, hadj = 1)
-box()
+ctd_bott(ctd_dat, num_levs = 7)
 
 grid.arrange(p1, p2, ncol = 1)
 

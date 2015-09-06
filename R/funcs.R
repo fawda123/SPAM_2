@@ -741,12 +741,91 @@ ctd_plot <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dept
     nlevels = levs,
     ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
     ylim = c(min(z.val),max(z.val)))
-  filled.legend(x.val,y.val,rotate(z.val),color=in_col,xlab = "",
-    nlevels = levs,
-    ylab = "",xlim = c(min(xintercepts),max(xintercepts)),
-    ylim = c(min(z.val),max(z.val)))
   
   }
+
+######
+# plot bottom DO from CTD by distance and time  
+# returns an interpolated two contour plot using methods similar to ctd_plot
+#
+# dat_in input ctd data
+# num_levs number of contour levels
+# ylab labels for y axis
+# col color vector
+# ncol number of colors for smoothing plot
+ctd_bott <- function(dat_in, num_levs = 8, ylab = 'Axial distance (km)',
+  cols = c('tomato', 'lightblue', 'lightgreen','green'),
+  ncol = 100){
+  
+  library(dplyr) 
+  
+  do_mat <- select(dat_in, Station, Date, Depth, DO, dist) %>% 
+    group_by(Station, Date) %>% 
+    mutate(maxd = max(Depth, na.rm = T)) %>% 
+    filter(Depth == maxd) %>%
+    ungroup %>% 
+    select(Date, dist, DO) %>% 
+    spread(Date, DO) %>% 
+    data.frame
+  
+  # interp for plot
+  
+  # first create new grid
+  uni_dts <- sort(unique(dat_in$Date))
+  dists <- unique(dat_in$dist)
+  num_int <- 200
+  new_grd <- expand.grid(
+      approx(dists, n = num_int)$y, 
+      approx(uni_dts, n = num_int)$y
+      )
+  
+  # then interp
+  int_val <- fields::interp.surface(
+    obj = list(  
+      x = dists, 
+      y = uni_dts, 
+      z = do_mat[,-1]), 
+    loc = new_grd
+    )
+  do_mat <- cbind(new_grd, int_val)
+  names(do_mat) <- c('Distance', 'Date', 'DO')
+  do_mat <- spread(do_mat, Date, DO)
+  x.val <- as.numeric(names(do_mat)[-1])
+  y.val <- do_mat$Distance
+  z.val <- as.matrix(do_mat[, -1])
+  in_col <- colorRampPalette(cols)
+  
+  # function to transpose
+  rotate <- function(x) t(apply(x, 2, rev))
+  
+  # plot margins
+  plot.new()
+  par(new = "TRUE",plt = c(0.1,0.83,0.15,0.9),las = 1,cex.axis = 1)
+  
+  # contour plot with isolines
+  filled.contour3(x = x.val, y = -1 * rev(y.val), z = rotate(z.val),
+    color.palette = in_col, ylab = ylab,
+    nlevels = ncol, # for smoothed colors
+    axes = F)
+  contour(x = x.val, y =  -1 * rev(y.val), z = rotate(z.val), nlevels= num_levs,
+    axes = F, add = T)
+  
+  # axis labels
+  axis(side = 2, at = -1 * seq(0, 20, by = 5), labels = seq(0, 20, by = 5))
+  axis.Date(side = 3, x = as.Date(x.val), format = '%m-%Y')
+  axis(side = 1, at = uni_dts, labels = uni_dts, tick = F, cex.axis = 0.5, las = 2, line = -0.5)
+  axis(side = 4, at = -1 * rev(dists), labels = rev(unique(dat_in$Station)), tick = F, 
+    cex.axis = 0.5, las = 1, line = -0.5)
+  box()
+  
+  # legend
+  par(new = "TRUE", plt = c(0.90,0.94,0.15,0.9), las = 1,cex.axis = 1)
+  filled.legend(x.val,y.val,rotate(z.val),color=in_col,xlab = "",
+    nlevels = num_levs,
+    ylab = "",
+    ylim = c(min(z.val),max(z.val)))
+  
+}
 
 ######
 # plotting functions (not mine)
