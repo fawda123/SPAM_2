@@ -186,12 +186,6 @@ p2 <- ggplot(do_dat, aes(x = datetimestamp, y = do_daily, colour = cols)) +
   theme_classic() + 
   theme(axis.title.x = element_blank(), legend.position = 'top', legend.title = element_blank())
 
-# plots
-pdf('C:/Users/mbeck/Desktop/hypox_plots.pdf', height = 5, width = 10, family = 'serif')
-ctd_bott(ctd_dat, num_levs = 10, ncol = 10)
-grid.arrange(p1, p2, ncol = 1)
-dev.off()
-
 # selected dates
 # low, med, high flow
 # 2014-10-15, 2015-04-29, 204-05-13 (8, 14, 2)
@@ -201,5 +195,15 @@ ctd <- split(ctd_dat, ctd_dat$Date)
 
 sel_dts <- names(ctd)[c(8, 14, 2)]
 sel <- names(ctd) %in% sel_dts
-ctd_plotmult(ctd[sel_dts], var_plo = 'Salinity', var_labs = sel_dts)
-ctd_plotmult(ctd[sel_dts], var_plo = 'DO', var_labs = sel_dts)
+flos <- c('Lo flow', 'Med flow', 'Hi flow')
+
+pdf('C:/Users/mbeck/Desktop/hypox_plots.pdf', height = 5, width = 10, family = 'serif')
+ctd_bott(ctd_dat, num_levs = 10, ncol = 10)
+grid.arrange(p1, p2, ncol = 1)
+dev.off()
+pdf('C:/Users/mbeck/Desktop/ctd_flos.pdf', height = 7, width = 7, family = 'serif')
+ctd_plotmult(ctd[sel_dts], ncol = 8, var_plo = 'Salinity', 
+  var_labs = paste0('Salinity ', sel_dts, ', ', flos))
+ctd_plotmult(ctd[sel_dts], ncol = 8, var_plo = 'DO', 
+  var_labs = paste0('DO ', sel_dts, ', ', flos))
+dev.off()
