@@ -140,26 +140,111 @@ dat$magsP <- dat$mag * cos(pi * diffval/180)
 # match ctd dates with flow
 
 data(ctd_dat)
-data(flo_dat) # do ten day mwa
+data(flo_dat)
+data(wqm_dat)
 
 library(CTDplot)
 library(ggplot2)
 library(SWMPr)
+library(dplyr)
+library(gridExtra)
+library(tidyr)
+source('R/funcs.R')
 
 # split ctd by dates, get unique dates
 ctd <- split(ctd_dat, ctd_dat$Date)
 
-# add mw smoother 
-flo_dat$discharge_ave <- smoother(flo_dat, window = 10, sides = 1)[, 2]
-flo_dat <- tidyr::gather(flo_dat, 'variable', 'value', -Date)
+# date ranges from wqm
+rngs <- as.Date(range(wqm_dat$datetimestamp, na.rm = T))
 
+# plot of ten day average of flow, colored by quantiles
+# also shows dates of ctd casts
+flo_dat <- filter(flo_dat, rngs[1] <= Date & Date <= rngs[2])
+flo_dat$discharge <- smoother(flo_dat, window = 10, sides = 1)[, 2]
+levs <- quantile(flo_dat$discharge, c(0.33, 0.66), na.rm = TRUE)
+flo_dat$levels <- cut(flo_dat$discharge, breaks = c(-Inf, levs, Inf), labels = c('low', 'med', 'hi'))
 uni_dts <- unique(ctd_dat$Date)
-ggplot(flo_dat, aes(x = Date, y = value, group = variable, colour = variable)) + 
-  geom_line() + 
-  scale_y_continuous('Disharge (m3/s)') + 
+flo_dat <- filter(flo_dat, rngs[1] <= Date & Date <= rngs[2])
+
+p1 <- ggplot(flo_dat, aes(x = Date, y = discharge, colour = levels)) + 
+  geom_line(aes(group = 1), size = 1) + 
+  scale_y_continuous('10 day mean disharge (m3/s)') + 
+  scale_colour_manual(values = RColorBrewer::brewer.pal(9, 'Set1')[c(1:3)]) + 
   geom_vline(xintercept = as.numeric(uni_dts), linetype = 'dashed') + 
   theme_classic() + 
-  theme(axis.title.x = element_blank(), legend.position = 'top')
+  theme(axis.title.x = element_blank(), legend.position = 'top', legend.title = element_blank())
+
+# plot of DO at P05-B
+# also shows dates of ctd casts
+do_dat <- filter(wqm_dat, stat %in% 'P05-B') %>% 
+  select(datetimestamp, do_mgl) %>% 
+  mutate(do_daily = smoother(do_mgl, window = 48)[, 1])
+do_dat$cols <- cut(do_dat$do_daily, c(-Inf, 2, Inf), labels = c('Hypoxic', 'Normoxic'))
+
+p2 <- ggplot(do_dat, aes(x = datetimestamp, y = do_daily, colour = cols)) + 
+  geom_line(aes(group = 1), size = 1) + 
+  scale_y_continuous('daily mean DO (mg/L)') + 
+  scale_colour_manual(values = c('black', 'grey')) + 
+  geom_vline(xintercept = as.numeric(as.POSIXct(uni_dts)), linetype = 'dashed') + 
+  theme_classic() + 
+  theme(axis.title.x = element_blank(), legend.position = 'top', legend.title = element_blank())
+
+##
+# get bottom DO at each station for all dates in ctd data
+# make in grid format of dist by date for interp
+do_mat <- select(ctd_dat, Station, Date, Depth, DO, dist) %>% 
+  group_by(Station, Date) %>% 
+  mutate(maxd = max(Depth, na.rm = T)) %>% 
+  filter(Depth == maxd) %>%
+  ungroup %>% 
+  select(Date, dist, DO) %>% 
+  spread(Date, DO) %>% 
+  data.frame
+  
+# interp for plot
+
+# first create new grid
+uni_dts <- sort(unique(ctd_dat$Date))
+dists <- unique(ctd_dat$dist)
+num_int <- 200
+new_grd <- expand.grid(
+    approx(dists, n = num_int)$y, 
+    approx(uni_dts, n = num_int)$y
+    )
+
+# then interp
+int_val <- fields::interp.surface(
+  obj = list(  
+    x = dists, 
+    y = uni_dts, 
+    z = do_mat[,-1]), 
+  loc = new_grd
+  )
+do_mat <- cbind(new_grd, int_val)
+names(do_mat) <- c('Distance', 'Date', 'DO')
+do_mat <- spread(do_mat, Date, DO)
+x.val <- as.numeric(names(do_mat)[-1])
+y.val <- do_mat$Distance
+z.val <- as.matrix(do_mat[, -1])
+cols <- RColorBrewer::brewer.pal(9, 'Set1')[c(1:3)]
+in_col <- colorRampPalette(cols)
+rotate <- function(x) t(apply(x, 2, rev))
+
+# contour plot with isolines
+filled.contour3(x = x.val, y = y.val, z = t(z.val),
+  color.palette = in_col,
+  nlevels = 8, # for smoothed colors
+  axes = F)
+contour(x = x.val, y = y.val, z = t(z.val), nlevels= 8,
+  axes = F, add = T)
+# axis labels
+axis(side = 2)
+axis.Date(side = 3, x = as.Date(x.val), format = '%m-%Y')
+axis.Date(side = 1, x = as.Date(x.val), at = uni_dts, labels = F, lwd.ticks = 2, col = 'grey')
+axis(side = 4, at = unique(ctd_dat$dist), labels = unique(ctd_dat$Station), tick = F, col = 'grey', cex.axis = 0.6, las = 1, hadj = 1)
+box()
+
+grid.arrange(p1, p2, ncol = 1)
 
 # selected dates
 # low, med, high flow
