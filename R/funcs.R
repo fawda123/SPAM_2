@@ -164,7 +164,7 @@ plot_adcp <- function(dat_in = NULL, all_in, shp_in, loc_in, bins = 1:5,
   
   # dir plot
   p1 <- suppressMessages({ggplot(loc_in, aes(x = long, y = lat)) + 
-    coord_fixed(xlim = bbox(shp_in)[1, ], ylim = bbox(shp_in)[2, ]) + 
+    coord_fixed(xlim = sp::bbox(shp_in)[1, ], ylim = sp::bbox(shp_in)[2, ]) + 
     geom_polygon(data = shp_in, aes(x = long, y = lat, group = group), 
       fill = 'lightgrey') +
     geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2, 
@@ -318,7 +318,7 @@ plot_adcpraw <- function(dat_in, shp_in, loc_in, bins = 1:5, bin_labs = NULL,
   
   # dir plot
   p1 <- suppressMessages({ggplot(loc_in, aes(x = long, y = lat)) + 
-    coord_fixed(xlim = bbox(shp_in)[1, ], ylim = bbox(shp_in)[2, ]) + 
+    coord_fixed(xlim = sp::bbox(shp_in)[1, ], ylim = sp::bbox(shp_in)[2, ]) + 
     geom_polygon(data = shp_in, aes(x = long, y = lat, group = group), 
       fill = 'lightgrey') +
     geom_segment(data = vecs, aes(x = long1, y = lat1, xend = long2, yend = lat2, colour = bins), 
