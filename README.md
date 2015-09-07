@@ -3,7 +3,7 @@
 
 `adcp_dat.RData`: ADCP data from P05
 
-`adcp_datP.RData`: reprocessed version of `acdp_dat.RData` in long format that also includes columns for E/N magnitude vectors and angle angle and magnitude of principal component axis
+`adcp_datP.RData`: reprocessed version of `acdp_dat.RData` that has bins 1 - 3 averaged, then rotated along first principal component axis.  Columns are datetimestamp, MagN (averaged north vector), MagE (averaged east vector), Dir (0-360 direction based on averaged MagN, MagE), Mag (magnitude/speed of averaged MagN, MagE along Dir), DirP (direction of the first principal component axis from Dir/Mag), and MagP (magnitude/speed along the first principal component axis
 
 `ctd_dat.RDAta`: CTD monthly casts along tidal axis
 

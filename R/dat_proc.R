@@ -163,81 +163,56 @@ save(wqm_dat, file = 'data/wqm_dat.RData')
 # save(adcp_dat, file = 'data/adcp_dat.RData')
 
 ##
-# decompose adcp data into primary axis from eigenvectors
+# average the bottom 3 bins of adcp data
+# get first principal component of the averaged data
+# rotate the averaged vector along the first principal component
 # saved as adcp_datP
 
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+source('R/funcs.R')
+
 data(adcp_dat)
+data(pbay)
 
 dat_in <- adcp_dat
 
-# bins to decompose (all)
-bins <- length(grep('^Dir', names(dat_in)))
-bins <- c(1:bins)
-  
-# subset directions, mags by bins
-dirs <- dat_in[, grep(paste(paste0('^Dir', bins), collapse = '|'), names(dat_in))] %>% 
-  data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
-  gather('variable', 'value', -datetimestamp) %>% 
-  mutate(variable = gsub('^Dir', 'Bin', variable)) %>% 
-  rename(
-    bin = variable, 
-    dir = value
-    )
-mags <- dat_in[, grep(paste(paste0('^Mag', bins), collapse = '|'), names(dat_in))] %>% 
-  data.frame(datetimestamp = dat_in$datetimestamp, .) %>% 
-  gather('variable', 'value', -datetimestamp) %>% 
-  mutate(variable = gsub('^Mag', 'Bin', variable)) %>% 
-  rename(
-    bin = variable, 
-    mag = value
-    )
-# join the two
-dat <- full_join(dirs, mags, by = c('datetimestamp', 'bin'))
+# to use 1:3 based on exploratory plots of cumulative distance for each bin
+bins <- 1:3
 
-# get diff of observed data from rotation angle
-diffN <- dat$dir - 360
-diffE <- dat$dir - 90
-  
-# get magnitude of new vectors
-dat$magsN <- dat$mag * cos(pi * diffN/180)
-dat$magsE <- dat$mag * cos(pi * diffE/180)
+# get north/east components of bins 1:3, then average
+datN <- vecrots(dat_in) %>% 
+  .[, grep(paste(c('datetimestamp', bins), collapse = '|'), names(.))] %>% 
+  .[, grep('datetimestamp|Mag', names(.))] %>% 
+  mutate(MagN = rowMeans(.[grepl('Mag', names(.))], na.rm = TRUE)) %>% 
+  select(datetimestamp, MagN)
 
-##
-#get  angle of primary
+datE <- vecrots(dat_in, 90) %>% 
+  .[, grep(paste(c('datetimestamp', bins), collapse = '|'), names(.))] %>% 
+  .[, grep('datetimestamp|Mag', names(.))] %>% 
+  mutate(MagE = rowMeans(.[grepl('Mag', names(.))], na.rm = TRUE)) %>% 
+  select(datetimestamp, MagE)
 
-# get vector along primary
-dat <- split(dat, dat$bin)
-rots <- lapply(dat, function(x){
-  
-  # eigen decomp
-  eig <- eigen(cov(na.omit(x[, c('magsN', 'magsE')])))
-  
-  # vector of primary
-  vecs <- eig$vectors
-  x$angs <- atan(vecs[2, 1]/vecs[1, 1]) * 180/pi
-  
-  # get magnitude along primary axis (use original vector)
-  diffval <- x$dir - x$angs
-  x$magsP <- x$mag * cos(pi * diffval/180)
-  
-  return(x)
+# combine datN/datE objects, recreate vector from averaged N/E vecs
+dat <- full_join(datN, datE, by = 'datetimestamp')
+dat$Dir <- with(dat, atan2(MagE, MagN) * 180/pi)
+dat$Dir[dat$Dir < 0] <- 360 - abs(dat$Dir[dat$Dir < 0])
+dat$Mag <- with(dat, MagE / sin(pi * Dir / 180))
 
-}) 
+# get principal component of the combined vector
+eig <- eigen(cov(na.omit(dat[, c('MagN', 'MagE')])))
+vecs <- eig$vectors
 
-dat <- do.call('rbind', rots)
-rownames(dat) <- 1:nrow(dat)
+# dirP is the direction of the primary axis
+DirP <- atan(vecs[2, 1]/vecs[1, 1]) * 180/pi
+if(DirP < 0) DirP <- 360 - abs(DirP)
+dat$DirP <- DirP
 
-# add pressure/height data from adcp_dat (repeated across bins)
-hghts <- dat_in[, grep('datetimestamp|Dir|Depth', names(dat_in))] %>% 
-  gather('variable', 'value', -datetimestamp, -Depth.mm.) %>% 
-  mutate(variable = gsub('^Dir', 'Bin', variable)) %>% 
-  rename(
-    bin = variable, 
-    dir = value
-    ) %>% 
-  select(datetimestamp, bin, Depth.mm.)
+# magsP is the magnitude along the primary axis
+diffval <- dat$Dir - dat$DirP
+dat$MagP <- dat$Mag * cos(pi * diffval/180)
 
-dat <- full_join(dat, hghts, by = c('datetimestamp', 'bin'))
 adcp_datP <- dat
 save(adcp_datP, file = 'data/adcp_datP.RData')
 

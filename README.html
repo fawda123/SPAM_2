@@ -66,7 +66,7 @@ img {
 <div id="readme" class="section level2">
 <h2>README</h2>
 <p><code>adcp_dat.RData</code>: ADCP data from P05</p>
-<p><code>adcp_datP.RData</code>: reprocessed version of <code>acdp_dat.RData</code> in long format that also includes columns for E/N magnitude vectors and angle angle and magnitude of principal component axis</p>
+<p><code>adcp_datP.RData</code>: reprocessed version of <code>acdp_dat.RData</code> that has bins 1 - 3 averaged, then rotated along first principal component axis. Columns are datetimestamp, MagN (averaged north vector), MagE (averaged east vector), Dir (0-360 direction based on averaged MagN, MagE), Mag (magnitude/speed of averaged MagN, MagE along Dir), DirP (direction of the first principal component axis from Dir/Mag), and MagP (magnitude/speed along the first principal component axis</p>
 <p><code>ctd_dat.RDAta</code>: CTD monthly casts along tidal axis</p>
 <p><code>depth_tran.RData</code>: metadata for depth transect along tidal axis of Escambia bay, distance and depth</p>
 <p><code>met_dat.RData</code>: metabolism estimates for P02, P05-S, P05-B</p>

@@ -67,55 +67,19 @@ library(tidyr)
 library(ggplot2)
 
 data(adcp_dat)
+data(adcp_datP)
 data(pbay)
 
-dat_in <- adcp_dat
-
-datN <- vecrots(adcp_dat)
-datE <- vecrots(adcp_dat, 90)
-# to use 1:3 based on exploratory plots above
-bins <- 1:3
-
-# get north/east components of bins 1:3, then average
-datN <- vecrots(dat_in) %>% 
-  .[, grep(paste(c('datetimestamp', bins), collapse = '|'), names(.))] %>% 
-  .[, grep('datetimestamp|Mag', names(.))] %>% 
-  mutate(MagN = rowMeans(.[grepl('Mag', names(.))], na.rm = TRUE)) %>% 
-  select(datetimestamp, MagN)
-
-datE <- vecrots(dat_in, 90) %>% 
-  .[, grep(paste(c('datetimestamp', bins), collapse = '|'), names(.))] %>% 
-  .[, grep('datetimestamp|Mag', names(.))] %>% 
-  mutate(MagE = rowMeans(.[grepl('Mag', names(.))], na.rm = TRUE)) %>% 
-  select(datetimestamp, MagE)
-
-# combine datN/datE, recreate vector from averaged N/E vecs
-dat <- full_join(datN, datE, by = 'datetimestamp')
-dat$dir <- with(dat, atan2(MagE, MagN) * 180/pi)
-dat$dir[dat$dir < 0] <- 360 - abs(dat$dir[dat$dir < 0])
-dat$mag <- with(dat, MagE / sin(pi * dir / 180))
-
-# get principal component of the combined vector
-eig <- eigen(cov(na.omit(dat[, c('MagN', 'MagE')])))
-vecs <- eig$vectors
-
-dirP <- atan(vecs[2, 1]/vecs[1, 1]) * 180/pi
-if(dirP < 0) dirP <- 360 - abs(dirP)
-dat$dirP <- dirP
-
-# get magnitude along primary axis (use original vector)
-diffval <- dat$dir - dat$dirP
-dat$magsP <- dat$mag * cos(pi * diffval/180)
-
-# compare with original bins
+# compare with averaged lower 3 and princomp to original bins
 toplo <- adcp_dat[, c('datetimestamp', 'Mag1', 'Dir1', 'Mag2', 'Dir2', 'Mag3', 'Dir3')]
-toplo$Mag4 <- dat$mag # fourth bin is the averaged of the first three
-toplo$Dir4 <- dat$dir
-toplo$Mag5 <- dat$magsP # fifth bin is the vector along the principal axis
-toplo$Dir5 <- dat$dirP
+toplo$Mag4 <- adcp_datP$Mag # fourth bin is the averaged of the first three
+toplo$Dir4 <- adcp_datP$Dir
+toplo$Mag5 <- adcp_datP$MagP # fifth bin is the vector along the principal axis
+toplo$Dir5 <- adcp_datP$DirP
 
+# plots of bins 1/3, averaged, and decomp along PC axis for multiple timesteps
 labs <- c('Bin 1: 2.5m', 'Bin 2: 2 m', 'Bin 3: 1.5 m', 'Averaged', 'PC axis')
-pdf('figs/binagg_eigs.pdf', height = 8, width =  3)
+pdf('figs/binagg.pdf', height = 8, width =  3)
 for(i in 100:200){
   cat(i, '\t')
   p <- plot_adcpraw(toplo[i, ], shp_in = pbay, bins = 1:5, bin_labs = labs,
@@ -200,3 +164,17 @@ flos <- c('Lo flow', 'Med flow', 'Hi flow')
 # ctd_plotmult(ctd[sel_dts], ncol = 8, var_plo = 'DO', 
 #   var_labs = paste0('DO ', sel_dts, ', ', flos))
 # dev.off()
+
+######
+# now compare ctd eigen vectors from binned data with bottom water DO at p05 during hypoxia and not during hypoxia
+rm(list = ls())
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+source('R/funcs.R')
+
+data(wqm_dat)
+data(adcp_datP2)
+
+
