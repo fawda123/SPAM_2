@@ -179,8 +179,8 @@ data(wqm_dat)
 data(adcp_datP)
 
 # date to center eval, plus/minus x * weeks
-dt_cent <- as.POSIXct('2014-11-05', tz = 'America/Regina')
-dt_cent <- c(dt_cent - 6 * 604800, dt_cent + 6 * 604800)
+dt_cent <- as.POSIXct('2014-07-23', tz = 'America/Regina')
+dt_cent <- c(dt_cent - 2 * 604800, dt_cent + 2 * 604800)
 
 # subset each by dates
 do_dat <- filter(wqm_dat, stat %in% 'P05-B') %>% 
@@ -206,15 +206,19 @@ dat <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120) %>%
     ddodt = c(NA, diff(do_mgl))
   )
 
-# plot(do_mgl ~ datetimestamp, data = dat, type = 'l')
-# plot(ddodt ~ datetimestamp, data = dat, type = 'l')
-# plot(cumdist ~ datetimestamp, data = dat, type = 'l')
-# plot(do_mgl ~ MagP, data = dat)
+pdf('figs/JulyDO.pdf', family = 'serif', height = 5, width = 6)
+par(mfrow = c(3, 2), mar = c(4.5, 4.5, 0.5, 0.5))
+plot(do_mgl ~ datetimestamp, data = dat, type = 'l')
+plot(ddodt ~ datetimestamp, data = dat, type = 'l')
+plot(cumdist ~ datetimestamp, data = dat, type = 'l')
+plot(do_mgl ~ MagP, data = dat)
 plot(ddodt ~ dxdt, data = dat)
 mod <- lm(ddodt ~ dxdt, data = dat)
 abline(reg = mod)
+dev.off()
 
 ######
+# look at moving window corrs/regs of ddodt by dxdt
 
 rm(list = ls())
 
@@ -246,10 +250,10 @@ dat <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120, method =
     ddodt = c(NA, diff(do_mgl))
   )
 
-winsz <- 1 * 336 # approx one month
+winsz <- 1 * 336 # approx one month (step is two hours)
 
 slo <- rep(NA, length = nrow(dat))
-rsq <- slo
+rsq <- corr <- slo
 for(i in 1:nrow(dat)){
   
   cat(i, '\t')
@@ -260,13 +264,72 @@ for(i in 1:nrow(dat)){
   mod <- with(tomod, lm(ddodt ~ dxdt, tomod))
   sloi <- coef(mod)[2]
   rsqi <- summary(mod)$r.squared
+  corri <- with(tomod, cor(dxdt, ddodt))
+  corr[i] <- corri
   slo[i] <- sloi
   rsq[i] <- rsqi
   
 }
 
-par(mfrow = c(2, 1))
-plot(dat$datetimestamp[1:1500], slo[1:1500], type = 'l')
-plot(dat$datetimestamp[1:1500], rsq[1:1500], type = 'l')
+wins <- 1:2000
+pdf('figs/mw_eval.pdf', height = 5, width = 6, family = 'serif')
+par(mfrow = c(3, 1), mar = c(4.5, 4.5, 0.5, 0.5))
+plot(dat$datetimestamp[wins], corr[wins], type = 'l')
+plot(dat$datetimestamp[wins], slo[wins], type = 'l')
+plot(dat$datetimestamp[wins], rsq[wins], type = 'l')
+dev.off()
+dat$datetimestamp[which.min(corr[wins])]
 
+######
+## now compare ctd eigen vectors from binned data with bottom water DO at p05 during hypoxia and not during hypoxia
+# rm(list = ls())
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(SWMPr)
+source('R/funcs.R')
+
+data(wqm_dat)
+data(adcp_datP)
+
+# date to center eval, plus/minus x * weeks
+dt_cent <- as.POSIXct('2014-09-03', tz = 'America/Regina')
+dt_cent <- c(dt_cent, dt_cent + 4 * 604800)
+
+# subset each by dates
+do_dat <- filter(wqm_dat, stat %in% 'P05-B') %>% 
+  select(datetimestamp, do_mgl) %>% 
+  filter(datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) 
+
+mv_dat <- filter(adcp_datP, datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) %>% 
+  select(-MagN, -MagE)
+
+# combine, get differences
+# dist is the approximate distance travelled by a parcel at time t2 for the preceding two hours based on an average of speed at t1 and t2 multipled by two hours, then converted to km
+# 
+cum.na <- function(x) { 
+  x[which(is.na(x))] <- 0 
+  return(cumsum(x)) 
+} 
+
+dat <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120) %>% 
+  mutate(
+    dist = smoother(MagP, 2)[, 1] *  60 * 60 * 2 / 1000, 
+    cumdist = cum.na(dist),
+    dxdt = c(NA, diff(dist)), 
+    ddodt = c(NA, diff(do_mgl))
+  ) %>% 
+  na.omit
+
+pdf('figs/SepDO.pdf', family = 'serif', height = 5, width = 6)
+par(mfrow = c(3, 2), mar = c(4.5, 4.5, 0.5, 0.5))
+plot(do_mgl ~ datetimestamp, data = dat, type = 'l')
+plot(ddodt ~ datetimestamp, data = dat, type = 'l')
+plot(cumdist ~ datetimestamp, data = dat, type = 'l')
+plot(do_mgl ~ MagP, data = dat)
+plot(ddodt ~ dxdt, data = dat)
+mod <- lm(ddodt ~ dxdt, data = dat)
+abline(reg = mod)
+dev.off()
 
