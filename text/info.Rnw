@@ -1,0 +1,115 @@
+\documentclass[letterpaper,12pt]{article}
+\usepackage[top=1in,bottom=1in,left=1in,right=1in]{geometry}
+\usepackage{setspace}
+\usepackage[colorlinks=true,urlcolor=blue,citecolor=blue,linkcolor=blue]{hyperref}
+\usepackage{indentfirst}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage[final]{animate}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usepackage{rotating}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{subfig} 
+\usepackage[noae]{Sweave}
+\usepackage{cleveref}
+\usepackage[figureposition=bottom]{caption}
+\usepackage{paralist}
+\usepackage{acronym}
+\usepackage{outlines}
+\usepackage{pdflscape}
+
+% knitr options and libs
+<<setup, echo = FALSE, cache = F, message = F>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path = 'figs/', fig.align = 'center', fig.show = 'hold',message = F, results = 'asis',dev = 'pdf',dev.args=list(family='serif'), fig.pos = '!ht', warning = F)
+options(replace.assign=TRUE,width=90)
+
+# libraries
+library(CTDplot)
+library(dplyr)
+library(SWMPr)
+library(ggplot2)
+@
+
+\setlength{\parskip}{\baselineskip}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+The following summarizes a brief analysis to estimate changes in dissolved oxygen along a tidal cycle.  Estimates were from CTD vertical profiles of dissolved oxygen on the longitudinal axis of Escambia Bay and ADCP data of water direction and velocities at P05.  
+\begin{enumerate}
+\item{
+CTD data from July 23rd, 2014 were used to estimate the horizontal gradient in dissolved oxygen.
+<<echo = F, fig.height = 3, fig.width = 7.5, out.width = '\\textwidth'>>=
+load(file = 'M:/docs/SPAM_2/data/ctd_dat.RData')
+sel <- as.Date('2014-07-23')
+ctd <- filter(ctd_dat, Date %in% sel)
+
+ctd_plot(ctd, var_plo = 'DO', ncol = 8)
+@
+}
+\item{
+ADCP data at P05 for the month of July were used to estimate the average tidal excursion per tidal cycle.  The ADCP data were first reprocessed from the raw data by averaging the north and south vectors for the lowest three bins, finding the first principal component from the averaged vector, and reprojecting the averaged vector along the first principal component.  
+
+The plot shows distance travelled of a theoretical water parcel within a one-month period centered on July 23\textsupersript{rd}.  The points mark changes in tidal direction.  Average distance traveled 
+<<echo = F, fig.height = 3, fig.width = 7.5>>=
+load(file = 'M:/docs/SPAM_2/data/adcp_datP.RData') # see dat_proc.R for data processing
+load(file = 'M:/docs/SPAM_2/data/wqm_dat.RData')
+
+# date to center eval, plus/minus x * weeks
+dt_cent <- as.POSIXct('2014-07-23', tz = 'America/Regina')
+dt_cent <- c(dt_cent - 2 * 604800, dt_cent + 2 * 604800)
+
+# subset each by dates
+do_dat <- filter(wqm_dat, stat %in% 'P05-B') %>% 
+  select(datetimestamp, do_mgl) %>% 
+  filter(datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) 
+
+mv_dat <- filter(adcp_datP, datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) %>% 
+  select(-MagN, -MagE)
+
+# combine, get differences
+# dist is the approximate distance travelled by a parcel at time t2 for the preceding two hours based on an average of speed at t1 and t2 multipled by two hours, then converted to km
+cum.na <- function(x) { 
+  x[which(is.na(x))] <- 0 
+  return(cumsum(x)) 
+} 
+
+dat <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120) %>% 
+  mutate(
+    dist = smoother(MagP, 2)[, 1] *  60 * 60 * 2 / 1000, 
+    cumdist = cum.na(dist),
+    dxdt = c(NA, diff(dist)), 
+    ddodt = c(NA, diff(do_mgl)),
+    dirsign = sign(dist),
+    dirsign2 = sign(c(dist[-1], NA))# plot is messed up somehow
+  )
+
+chgs <- c(which(c(diff(dat$dirsign), NA) == -2))
+chgs <- rep(chgs, times = c(chgs[1], diff(chgs)))
+chgs <- c(chgs, rep(max(chgs) + 1, nrow(dat) - length(chgs)))
+dat$grps <- chgs
+
+dat2 <- group_by(dat, dirsign, grps) %>% 
+  summarise(cumdist2 = rev(cumsum(dist))[1]) %>% 
+  group_by(dirsign) %>% 
+  summarize(cumdist2 = mean(cumdist2, na.rm = T))
+
+ggplot(dat, aes(x = datetimestamp, y = cumdist, colour = factor(dirsign2))) + 
+  geom_line(aes(group = 1), size = 1) + 
+  # geom_point(data = chgs, aes(x = datetimestamp, y = cumdist), colour = 'black') +
+  theme_bw() + 
+  theme(legend.position = 'none') +
+  scale_colour_manual(values = RColorBrewer::brewer.pal(9, 'Set1')[c(1, 2)]) +
+  scale_y_continuous('Distance (km)')
+
+@
+
+}
+
+\end{enumerate}
+
+\end{document}
