@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2013.8.29)  14 SEP 2015 18:31
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2013.8.29)  15 SEP 2015 17:54
 entering extended mode
 **info.tex
 (M:\docs\SPAM_2\text\info.tex
@@ -640,48 +640,82 @@ Overfull \hbox (29.3747pt too wide) in paragraph at lines 86--87
  [][] 
  []
 
-! Undefined control sequence.
-l.96 ... period centered on July 23\textsupersript
-                                                  {rd}.  The points mark cha...
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 97.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 97.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 97.
+<figs/unnamed-chunk-3-1.pdf, id=4, 542.025pt x 216.81pt>
+File: figs/unnamed-chunk-3-1.pdf Graphic file (type pdf)
 
-<figs/unnamed-chunk-2-1.pdf, id=4, 542.025pt x 216.81pt>
-File: figs/unnamed-chunk-2-1.pdf Graphic file (type pdf)
-
-<use figs/unnamed-chunk-2-1.pdf>
-Package pdftex.def Info: figs/unnamed-chunk-2-1.pdf used on input line 99.
+<use figs/unnamed-chunk-3-1.pdf>
+Package pdftex.def Info: figs/unnamed-chunk-3-1.pdf used on input line 100.
 (pdftex.def)             Requested size: 440.38033pt x 176.15768pt.
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 110.
-Package atenddvi Info: Last page = 1.
  [1
 
 {C:/Users/mbeck/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map} <M:/docs/SPA
-M_2/text/figs/unnamed-chunk-1-1.pdf> <M:/docs/SPAM_2/text/figs/unnamed-chunk-2-
+M_2/text/figs/unnamed-chunk-1-1.pdf> <M:/docs/SPAM_2/text/figs/unnamed-chunk-3-
 1.pdf>]
-Package atveryend Info: Executing hook `AfterLastShipout' on input line 110.
+<figs/unnamed-chunk-5-1.pdf, id=26, 542.025pt x 216.81pt>
+File: figs/unnamed-chunk-5-1.pdf Graphic file (type pdf)
+
+<use figs/unnamed-chunk-5-1.pdf>
+Package pdftex.def Info: figs/unnamed-chunk-5-1.pdf used on input line 112.
+(pdftex.def)             Requested size: 440.38033pt x 176.15768pt.
+
+<figs/unnamed-chunk-7-1.pdf, id=27, 505.89pt x 433.62pt>
+File: figs/unnamed-chunk-7-1.pdf Graphic file (type pdf)
+
+<use figs/unnamed-chunk-7-1.pdf>
+Package pdftex.def Info: figs/unnamed-chunk-7-1.pdf used on input line 127.
+(pdftex.def)             Requested size: 440.38033pt x 377.47794pt.
+ [2 <M:/docs/SPAM_2/text/figs/unnamed-chunk-5-1.pdf>] <figs/unnamed-chunk-8-1.p
+df, id=43, 542.025pt x 614.295pt>
+File: figs/unnamed-chunk-8-1.pdf Graphic file (type pdf)
+
+<use figs/unnamed-chunk-8-1.pdf>
+Package pdftex.def Info: figs/unnamed-chunk-8-1.pdf used on input line 139.
+(pdftex.def)             Requested size: 440.38033pt x 499.11345pt.
+ [3 <M:/docs/SPAM_2/text/figs/unnamed-chunk-7-1.pdf>] <figs/unnamed-chunk-9-1.p
+df, id=57, 758.835pt x 686.565pt>
+File: figs/unnamed-chunk-9-1.pdf Graphic file (type pdf)
+
+<use figs/unnamed-chunk-9-1.pdf>
+Package pdftex.def Info: figs/unnamed-chunk-9-1.pdf used on input line 150.
+(pdftex.def)             Requested size: 469.75502pt x 425.02686pt.
+
+Overfull \hbox (29.3747pt too wide) in paragraph at lines 150--151
+ [][] 
+ []
+
+[4 <M:/docs/SPAM_2/text/figs/unnamed-chunk-8-1.pdf>]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 160.
+Package atenddvi Info: Last page = 5.
+ [5 <M:/docs/SPAM_2/text/figs/unnamed-chunk-9-1.pdf>]
+Package atveryend Info: Executing hook `AfterLastShipout' on input line 160.
  (M:\docs\SPAM_2\text\info.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 110.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 110.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 160.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 160.
 Package rerunfilecheck Info: File `info.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 110.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 160.
  ) 
 Here is how much of TeX's memory you used:
- 10644 strings out of 493921
- 173596 string characters out of 3147282
- 300464 words of memory out of 3000000
- 13794 multiletter control sequences out of 15000+200000
- 3938 words of font info for 15 fonts, out of 3000000 for 9000
+ 10691 strings out of 493921
+ 174415 string characters out of 3147282
+ 301464 words of memory out of 3000000
+ 13821 multiletter control sequences out of 15000+200000
+ 6376 words of font info for 23 fonts, out of 3000000 for 9000
  841 hyphenation exceptions out of 8191
- 44i,5n,42p,381b,355s stack positions out of 5000i,500n,10000p,200000b,50000s
-<C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb>
-Output written on info.pdf (1 page, 239274 bytes).
+ 44i,5n,42p,554b,456s stack positions out of 5000i,500n,10000p,200000b,50000s
+<C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Pr
+ogram Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Program Fil
+es/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Program Files/MiKTeX 
+2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on info.pdf (5 pages, 1696424 bytes).
 PDF statistics:
- 29 PDF objects out of 1000 (max. 8388607)
- 4 named destinations out of 1000 (max. 500000)
- 11 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 98 PDF objects out of 1000 (max. 8388607)
+ 13 named destinations out of 1000 (max. 500000)
+ 31 words of extra memory for PDF output out of 10000 (max. 10000000)
 

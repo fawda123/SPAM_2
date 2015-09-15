@@ -93,10 +93,38 @@ CTD data from July 23rd, 2014 were used to estimate the horizontal gradient in d
 \item{
 ADCP data at P05 for the month of July were used to estimate the average tidal excursion per tidal cycle.  The ADCP data were first reprocessed from the raw data by averaging the north and south vectors for the lowest three bins, finding the first principal component from the averaged vector, and reprojecting the averaged vector along the first principal component.  
 
-The plot shows distance travelled of a theoretical water parcel within a one-month period centered on July 23\textsupersript{rd}.  The points mark changes in tidal direction.  Average distance traveled 
+
+The plot shows distance travelled of a theoretical water parcel within a one-month period centered on July 23\textsuperscript{rd}.  The colors mark changes in tidal direction.  Average distance traveled was 3.04 km for landward excursions (blue) and for \ensuremath{-2.47} km seaward excursions (red).  The average distance travelled for all landward and seaward tidal cycles was 2.76 km.
 
 
-{\centering \includegraphics[width=\maxwidth]{figs/unnamed-chunk-2-1} 
+{\centering \includegraphics[width=\maxwidth]{figs/unnamed-chunk-3-1} 
+
+}
+
+
+
+}
+\item{
+
+The bottom-water dissolved oxygen gradient at P05 was estimated from the CTD data using the average distance travelled within a tidal cycle.  The average distance travelled during a landward or seaward flowing tide was plotted on interpolated bottom-water dissolved oxygen to estimate the DO gradient in each direction, relative to P05.  The estimated gradient was 0.87 mg/L for landward flow (DO chnage in blue) and 0.16 mg/L for seaward flow (DO change in red).  For both cases, dissolved oxygen was higher as distance increased from P05.  
+
+
+{\centering \includegraphics[width=\maxwidth]{figs/unnamed-chunk-5-1} 
+
+}
+
+
+
+}
+\item{
+
+Finally, a rate of oxygen change per tidal cycle was estimated.  The average time for each tidal cycle was estimated such that a unit of time could be assigned to each estimate from the previous step.  On average, the time for landward flow in the bottom was 9.53 hours and the time for seaward flow was 12.39 hours. This means that the rate of landward flow of dissolved oxygen was 0.07 mg/L/hr and the rate of seaward flow of dissolved oxygen was 0.02 mg/L/hr.
+}
+\item{
+This exercise was repeated for each CTD date to estimate rate of DO change with each tidal cycle.  CTD dates with a corresponding complete record of ADCP data within one month were used.
+
+
+{\centering \includegraphics[width=\maxwidth]{figs/unnamed-chunk-7-1} 
 
 }
 
@@ -104,7 +132,29 @@ The plot shows distance travelled of a theoretical water parcel within a one-mon
 
 
 }
+\item{
+CTD plots for each selected date in the previous plot, only first four
 
+
+{\centering \includegraphics[width=\maxwidth]{figs/unnamed-chunk-8-1} 
+
+}
+
+
+
+}
+\item{
+Tidal excursion plots and graphical illustration of bottom-water DO gradient for the first four dates in the bar plot. 
+
+
+{\centering \includegraphics[width=\textwidth]{figs/unnamed-chunk-9-1} 
+
+}
+
+
+
+
+}
 \end{enumerate}
 
 \end{document}

@@ -45,6 +45,7 @@ vecrots <- function(dat_in, theta = 360){
 # uses adcp_datP as input and principal vector estimated in dat_proc
 # assumes a fixed two hour timestep (7200 seconds)
 # cumulative distance is relative only to the estimated distance at each step
+# distances are in km, where the original speed vector is m/s
 #
 # dat_in adcp_datP input
 # timestep timestep interval in seconds for multiplying
@@ -747,14 +748,15 @@ ctd_plot <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dept
 # plot bottom DO from CTD by distance and time  
 # returns an interpolated two contour plot using methods similar to ctd_plot
 #
-# dat_in input ctd data
+# dat_in input ctd data, all dates and stations
 # num_levs number of contour levels
 # ylab labels for y axis
 # col color vector
 # ncol number of colors for smoothing plot
+# dat_out logical to return data used to create plot
 ctd_bott <- function(dat_in, num_levs = 8, ylab = 'Axial distance (km)',
   cols = c('tomato', 'lightblue', 'lightgreen','green'),
-  ncol = 100){
+  ncol = 100, dat_out = FALSE){
   
   library(dplyr) 
   
@@ -789,6 +791,8 @@ ctd_bott <- function(dat_in, num_levs = 8, ylab = 'Axial distance (km)',
   do_mat <- cbind(new_grd, int_val)
   names(do_mat) <- c('Distance', 'Date', 'DO')
   do_mat <- spread(do_mat, Date, DO)
+  if(dat_out) return(do_mat)
+  
   x.val <- as.numeric(names(do_mat)[-1])
   y.val <- do_mat$Distance
   z.val <- as.matrix(do_mat[, -1])
