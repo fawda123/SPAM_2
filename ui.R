@@ -389,6 +389,50 @@ shinyUI(fluidPage(
       plotOutput("metplot3", height = "300px", width = "1000px"),
       plotOutput("metplot2", height = "300px", width = "1000px")
     
+  ), 
+      
+  tabPanel("DO gradients",
+        
+        HTML('<p></p>'),
+                     
+        # first row of plots
+        fluidRow(
+          
+          column(width = 1,
+            img(src = "spam.jpg", width = 80)
+          ),
+          
+          # select ctd date to use as center of evaluation
+          column(width = 3, 
+          
+            selectInput(inputId = 'grddt',
+              label = h4('Pick CTD date for center'),
+              choices = ctd_dts, 
+              selected = ctd_dts[5], 
+              width = '600px'
+            )
+            
+          ),
+          
+          # select day window around evaluation date
+          column(width = 3, 
+            
+            numericInput(inputId = 'grdwin', 
+              label = h4('Evaluation window (days)'),
+              min = 1, 
+              value = 14, 
+              max = Inf, 
+              step = 1
+            )
+            
+          )
+      
+      ),
+    
+    plotOutput("grad_plo1", height = "300px", width = "1000px"),
+    plotOutput("grad_plo2", height = "300px", width = "1000px"), 
+    tableOutput("grad_tab")
+    
   )
   
 ))))

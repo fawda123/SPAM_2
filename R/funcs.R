@@ -1,4 +1,157 @@
 ######
+# plots to evaluate horizontal DO gradient from combined adcp, wqm, and ctd data
+#
+# wqm_in input wqm_dat file
+# adcp_in input acdp data file of binned and rotated vectors
+# ctd_in input ctd_dat file
+# dt_in chr string of date to center plots, which must be a date for a ctd cast in the format YYYY-mm-dd
+# win_in numeric of half-window widths in days for the evaluation period, defaults to +/- 14 days
+# cols optional two-element character string for landward, seaward colors. Default is blue for landward, red for seaward flow.
+# dist_plo logical if cumulative distance plot is returned, or the summary DO gradient plot
+# stats_out logical if summary statistics are returned
+#
+# requires dplyr
+grad_plo <- function(wqm_in, adcp_in, ctd_in, dt_in, win_in = 14, cols = NULL, dist_plo = FALSE, stats_out = FALSE){
+  
+  ###
+  # sanity checks
+  
+  # dates, check format and match with ctd dates
+  dt_in <- as.Date(dt_in, format = '%Y-%m-%d')
+  if(is.na(dt_in)) stop('Incorrect date format, must be %Y-%d-%m')
+  uni_dts <- sort(unique(ctd_in$Date))
+  if(!dt_in %in% uni_dts) stop(paste('dt_in must be one of', paste(uni_dts, collapse = ', ')))
+  
+  # get colors if not provided
+  if(!is.null(cols)){
+    if(length(cols) != 2) stop('cols must have two colors')
+    cols <- cols
+  } else {
+    cols <- RColorBrewer::brewer.pal(9, 'Set1')[c(1, 2)]
+  }
+
+  ##
+  # date to center eval, plus/minus x * weeks
+  dt_cent <- as.POSIXct(dt_in, tz = 'America/Regina')
+  dt_cent <- c(dt_cent - win_in * 86400, dt_cent + win_in * 86400)
+  
+  # subset each by dates
+  do_dat <- filter(wqm_in, stat %in% 'P05-B') %>% 
+    select(datetimestamp, do_mgl) %>% 
+    filter(datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) 
+  
+  mv_dat <- filter(adcp_in, datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) %>% 
+    select(-MagN, -MagE)
+  
+  # combine, get differences
+  # dist is the approximate distance travelled by a parcel at time t2 for the preceding two hours based on an average of speed at t1 and t2 multipled by two hours, then converted to km
+  # dirsign is indicator of up/down tidal vector
+  cum.na <- function(x) { 
+    x[which(is.na(x))] <- 0 
+    return(cumsum(x)) 
+  } 
+  
+  toplo <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120) %>% 
+    mutate(
+      dist = smoother(MagP, 2)[, 1] *  60 * 60 * 2 / 1000, 
+      cumdist = cum.na(dist),
+      dxdt = c(NA, diff(dist)), 
+      ddodt = c(NA, diff(do_mgl)),
+      dirsign = sign(dist),
+      dirsign2 = sign(c(dist[-1], NA))# plot is messed up somehow
+    )
+  
+  # create a vector of numbers where each group of numbers indicates a unique up/down tidal cycle
+  grps <- c(which(c(diff(toplo$dirsign), NA) == -2))
+  grps <- rep(grps, times = c(grps[1], diff(grps)))
+  grps <- c(grps, rep(max(grps) + 1, nrow(toplo) - length(grps)))
+  toplo$grps <- grps
+  
+  # a plot of the tidal excursion throughout the period
+  p_tid <- ggplot(toplo, aes(x = datetimestamp, y = cumdist, colour = factor(dirsign2))) + 
+    geom_line(aes(group = 1), size = 1) + 
+    # geom_point(data = chgs, aes(x = datetimestamp, y = cumdist), colour = 'black') +
+    theme_bw() + 
+    theme(legend.position = 'none', axis.title.x = element_blank()) +
+    scale_colour_manual(values = cols) +
+    scale_y_continuous('Distance (km)')
+  
+  if(dist_plo & stats_out == FALSE) return(p_tid)
+  
+  ###
+  # get data for do gradient plot 
+  
+  # get average distance travelled for all up and all down cycles
+  ave_exc <- group_by(toplo, grps, dirsign) %>% 
+    summarise(cumdist = rev(cumsum(dist))[1]) %>% 
+    group_by(dirsign) %>% 
+    summarize(cumdist = mean(cumdist, na.rm = T)) %>% 
+    na.omit %>% 
+    data.frame
+  
+  # get bottom DO on date, for each station
+  ctd <- filter(ctd_in, Date %in% dt_in) %>%
+    select(Station, Date, DO, Depth, dist) %>% 
+    group_by(Station) %>% 
+    filter(Depth == max(Depth)) %>% 
+    ungroup
+  
+  # interp
+  ctd_int <- approx(x = ctd$dist, y = ctd$DO, xout = seq(0, max(ctd$dist), length = 200))
+  ctd_int <- data.frame(dist = ctd_int$x, DO = ctd_int$y)
+  
+  # get distances to interpolate gradient for bottom water DO
+  dists <- filter(ctd, Station == 'P05')$dist
+  dists <- with(ave_exc, c(dists + cumdist[1], dists, dists + cumdist[2]))
+  
+  # get DO interpolations for dist
+  ctd_intexc <- approx(x = ctd$dist, y = ctd$DO, xout = dists)
+  
+  # DO gradient plot
+  p_grad <- ggplot(ctd, aes(x = dist)) + 
+    theme_bw() +
+    geom_ribbon(data = data.frame(x = dists)[1:2, , drop = F], 
+      aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[1], alpha = 0.6) +
+    geom_ribbon(data = data.frame(x = dists)[2:3, , drop = F], 
+      aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[2], alpha = 0.6) +
+    geom_text(aes(y = DO, label = Station)) + 
+    geom_line(data = ctd_int, aes(y = DO)) +
+    scale_y_continuous('DO (mg/L)') + 
+    scale_x_continuous('Distance (km)') + 
+    geom_point(data = data.frame(ctd_intexc)[-2, ], aes(x = x, y = y), size = 4)
+  
+  if(!dist_plo & stats_out == FALSE) return(p_grad)
+  
+  ###
+  # get summary statistics
+
+  # average time for each up/down cycle
+  tidcyc <- group_by(toplo, grps, dirsign) %>% 
+    summarise(n = length(grps)) %>% 
+    group_by(dirsign) %>% 
+    na.omit %>% 
+    summarise(meanhrs = 2 * mean(n, na.rm = T))
+  
+  # DO gradient and DO gradient change per hour given landward or seaward flow
+  lnd_dogrd <- diff(ctd_intexc$y)[2]
+  lnd_dogrdrt <- lnd_dogrd/tidcyc$meanhrs[2]
+  sea_dogrd <- -1 * diff(ctd_intexc$y)[1]
+  sea_dogrdrt <- sea_dogrd/tidcyc$meanhrs[1]
+  
+  # create output for summary stats
+  out <- c(ave_exc[2, 'cumdist'], -1 * ave_exc[1, 'cumdist'], tidcyc[2, 'meanhrs'], 
+    tidcyc[1, 'meanhrs'], lnd_dogrd, sea_dogrd, lnd_dogrdrt, sea_dogrdrt)
+  names(out) <- c('lnd_exc', 'sea_exc', 'lnd_hrs', 'sea_hrs', 'lnd_dogrd', 
+    'sea_dogrd', 'lnd_dogrdrt', 'sea_dogrdrt')
+  out <- tidyr::gather(data.frame(out)) %>% 
+    tidyr::separate(key, c('dir', 'val'), by = '_') %>% 
+    dplyr::rename(est = value)
+
+  return(out)
+  
+}
+
+######
 # rotate adcp vector to a direction
 #
 # dat_in input adcp data

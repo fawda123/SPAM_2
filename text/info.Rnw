@@ -34,6 +34,9 @@ library(SWMPr)
 library(ggplot2)
 library(tidyr)
 library(gridExtra)
+
+# functions
+source('M:/docs/SPAM_2/R/funcs.R')
 @
 
 \setlength{\parskip}{\baselineskip}
@@ -60,133 +63,38 @@ ADCP data at P05 for the month of July were used to estimate the average tidal e
 load(file = 'M:/docs/SPAM_2/data/adcp_datP.RData') # see dat_proc.R for data processing
 load(file = 'M:/docs/SPAM_2/data/wqm_dat.RData')
 
-# date to center eval, plus/minus x * weeks
-dt_cent <- as.POSIXct('2014-07-23', tz = 'America/Regina')
-dt_cent <- c(dt_cent - 2 * 604800, dt_cent + 2 * 604800)
-
-# subset each by dates
-do_dat <- filter(wqm_dat, stat %in% 'P05-B') %>% 
-  select(datetimestamp, do_mgl) %>% 
-  filter(datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) 
-
-mv_dat <- filter(adcp_datP, datetimestamp >= dt_cent[1] & datetimestamp <= dt_cent[2]) %>% 
-  select(-MagN, -MagE)
-
-# combine, get differences
-# dist is the approximate distance travelled by a parcel at time t2 for the preceding two hours based on an average of speed at t1 and t2 multipled by two hours, then converted to km
-# dirsign is indicator of up/down tidal vector
-cum.na <- function(x) { 
-  x[which(is.na(x))] <- 0 
-  return(cumsum(x)) 
-} 
-
-toplo <- comb(do_dat, mv_dat, date_col = 'datetimestamp', timestep = 120) %>% 
-  mutate(
-    dist = smoother(MagP, 2)[, 1] *  60 * 60 * 2 / 1000, 
-    cumdist = cum.na(dist),
-    dxdt = c(NA, diff(dist)), 
-    ddodt = c(NA, diff(do_mgl)),
-    dirsign = sign(dist),
-    dirsign2 = sign(c(dist[-1], NA))# plot is messed up somehow
-  )
-
-# create a vector of numbers where each group of numbers indicates a unique up/down tidal cycle
-grps <- c(which(c(diff(toplo$dirsign), NA) == -2))
-grps <- rep(grps, times = c(grps[1], diff(grps)))
-grps <- c(grps, rep(max(grps) + 1, nrow(toplo) - length(grps)))
-toplo$grps <- grps
-
-# get average distance travelled for all up and all down cycles
-ave_exc <- group_by(toplo, grps, dirsign) %>% 
-  summarise(cumdist = rev(cumsum(dist))[1]) %>% 
-  group_by(dirsign) %>% 
-  summarize(cumdist = mean(cumdist, na.rm = T)) %>% 
-  na.omit %>% 
-  data.frame
-
-# average distance travelled within each tidal cycle, regardless of direction
-ave_excall <- group_by(toplo, grps, dirsign) %>% 
-  summarise(cumdist = abs(rev(cumsum(dist))[1])) %>% 
-  ungroup %>% 
-  summarize(cumdist = mean(cumdist, na.rm = T)) %>% 
-  na.omit %>% 
-  data.frame
-
-# a plot of the tidal excursion throughout the period
-p <- ggplot(toplo, aes(x = datetimestamp, y = cumdist, colour = factor(dirsign2))) + 
-  geom_line(aes(group = 1), size = 1) + 
-  # geom_point(data = chgs, aes(x = datetimestamp, y = cumdist), colour = 'black') +
-  theme_bw() + 
-  theme(legend.position = 'none') +
-  scale_colour_manual(values = RColorBrewer::brewer.pal(9, 'Set1')[c(1, 2)]) +
-  scale_y_continuous('Distance (km)')
+p <- grad_plo(wqm_dat, adcp_datP, ctd_dat, sel, dist_plo = T)
+stats <- grad_plo(wqm_dat, adcp_datP, ctd_dat, dt_in = sel, stats_out = T)
 @
-The plot shows distance travelled of a theoretical water parcel within a one-month period centered on July 23\textsuperscript{rd}.  The colors mark changes in tidal direction.  Average distance traveled was \Sexpr{round(ave_exc$cumdist[2], 2)} km for landward excursions (blue) and for \Sexpr{round(ave_exc$cumdist[1], 2)} km seaward excursions (red).  The average distance travelled for all landward and seaward tidal cycles was \Sexpr{round(ave_excall, 2)} km.
+The plot shows distance travelled of a theoretical water parcel within a one-month period centered on July 23\textsuperscript{rd}.  The colors mark changes in tidal direction.  Average distance traveled was \Sexpr{round(with(stats, est[dir == 'lnd' & val == 'exc']), 2)} km for landward excursions (blue) and \Sexpr{round(with(stats, est[dir == 'sea' & val == 'exc']), 2)} km for seaward excursions (red).
 <<echo = F, fig.height = 3, fig.width = 7.5>>=
 p
 @
 }
 \item{
 <<echo = F>>=
-load(file = 'M:/docs/SPAM_2/data/ctd_dat.RData')
-
-# get bottom DO on July 23rd, for each station
-ctd <- filter(ctd_dat, Date %in% as.Date('2014-07-23')) %>% # & Station %in% c('P04', 'P05', 'P06')) %>% 
-  select(Station, Date, DO, Depth, dist) %>% 
-  group_by(Station) %>% 
-  filter(Depth == max(Depth)) %>% 
-  ungroup
-
-# interp
-ctd_int <- approx(x = ctd$dist, y = ctd$DO, xout = seq(0, max(ctd$dist), length = 200))
-ctd_int <- data.frame(dist = ctd_int$x, DO = ctd_int$y)
-
-# get distances to interpolate gradient for bottom water DO
-dists <- filter(ctd, Station == 'P05')$dist
-dists <- with(ave_exc, c(dists + cumdist[1], dists, dists + cumdist[2]))
-
-# get DO interpolations for dist
-ctd_intexc <- approx(x = ctd$dist, y = ctd$DO, xout = dists)
-
-cols <- RColorBrewer::brewer.pal(9, 'Set1')[c(1, 2)]
-
-p <- ggplot(ctd, aes(x = dist)) + 
-  theme_bw() +
-  geom_ribbon(data = data.frame(x = dists)[1:2, , drop = F], 
-    aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[1], alpha = 0.6) +
-  geom_ribbon(data = data.frame(x = dists)[2:3, , drop = F], 
-    aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[2], alpha = 0.6) +
-  geom_text(aes(y = DO, label = Station)) + 
-  geom_line(data = ctd_int, aes(y = DO)) +
-  scale_y_continuous('Distance (km)') + 
-  geom_point(data = data.frame(ctd_intexc)[-2, ], aes(x = x, y = y), size = 4)
-
+p <- grad_plo(wqm_dat, adcp_datP, ctd_dat, sel)
 @
-The bottom-water dissolved oxygen gradient at P05 was estimated from the CTD data using the average distance travelled within a tidal cycle.  The average distance travelled during a landward or seaward flowing tide was plotted on interpolated bottom-water dissolved oxygen to estimate the DO gradient in each direction, relative to P05.  The estimated gradient was \Sexpr{round(diff(ctd_intexc$y)[2], 2)} mg/L for landward flow (DO chnage in blue) and \Sexpr{-1 * round(diff(ctd_intexc$y)[1], 2)} mg/L for seaward flow (DO change in red).  For both cases, dissolved oxygen was higher as distance increased from P05.  
+The bottom-water dissolved oxygen gradient at P05 was estimated from the CTD data using the average distance travelled within a tidal cycle.  The average distance travelled during a landward or seaward flowing tide was plotted on interpolated bottom-water dissolved oxygen to estimate the DO gradient in each direction, relative to P05.  The estimated gradient was \Sexpr{round(with(stats, est[dir == 'lnd' & val == 'dogrd']), 2)} mg/L for landward flow (DO change in blue) and \Sexpr{round(with(stats, est[dir == 'sea' & val == 'dogrd']), 2)} mg/L for seaward flow (DO change in red).  For both cases, dissolved oxygen was higher as distance increased from P05.  
 <<echo = F, fig.width = 7.5, fig.height = 3>>=
 p
 @
 }
 \item{
-<<echo = F>>=
-# average time for each up/down cycle
-tidcyc <- group_by(toplo, grps, dirsign) %>% 
-  summarise(n = length(grps)) %>% 
-  group_by(dirsign) %>% 
-  na.omit %>% 
-  summarise(meanhrs = 2 * mean(n, na.rm = T))
-
-# hour rates of change given landward or seaward flow
-sea_grad <- -1 * diff(ctd_intexc$y)[1]/tidcyc$meanhrs[1]
-lan_grad <- diff(ctd_intexc$y)[2]/tidcyc$meanhrs[2]
-@
-Finally, a rate of oxygen change per tidal cycle was estimated.  The average time for each tidal cycle was estimated such that a unit of time could be assigned to each estimate from the previous step.  On average, the time for landward flow in the bottom was \Sexpr{round(tidcyc$meanhrs[1], 2)} hours and the time for seaward flow was \Sexpr{round(tidcyc$meanhrs[2], 2)} hours. This means that the rate of landward flow of dissolved oxygen was \Sexpr{round(lan_grad, 2)} mg/L/hr and the rate of seaward flow of dissolved oxygen was \Sexpr{round(sea_grad, 2)} mg/L/hr.
+Finally, a rate of oxygen change per tidal cycle was estimated.  The average time for each tidal cycle was estimated such that a unit of time could be assigned to each estimate from the previous step.  On average, the time for landward flow in the bottom was \Sexpr{round(with(stats, est[dir == 'lnd' & val == 'hrs']), 2)} hours and the time for seaward flow was \Sexpr{round(with(stats, est[dir == 'sea' & val == 'hrs']), 2)} hours. This means that the rate of landward flow of dissolved oxygen was \Sexpr{round(with(stats, est[dir == 'lnd' & val == 'dogrdrt']), 2)} mg/L/hr and the rate of seaward flow of dissolved oxygen was \Sexpr{round(with(stats, est[dir == 'sea' & val == 'dogrdrt']), 2)} mg/L/hr.
 }
 \item{
 This exercise was repeated for each CTD date to estimate rate of DO change with each tidal cycle.  CTD dates with a corresponding complete record of ADCP data within one month were used.
 <<echo = F, fig.height = 6, fig.width = 7>>=
 load(file = 'M:/docs/SPAM_2/data/ctd_dat.RData')
 load(file = 'M:/docs/SPAM_2/data/adcp_datP.RData') 
+
+# cumulative sum function with missing data
+cum.na <- function(x) { 
+  x[which(is.na(x))] <- 0 
+  return(cumsum(x)) 
+} 
+cols <- RColorBrewer::brewer.pal(9, 'Set1')[c(1, 2)]
 
 # unique ctd dates
 uni_dts <- as.character(unique(ctd_dat$Date))
@@ -302,7 +210,7 @@ for(dt in dts){
       aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[2], alpha = 0.6) +
     geom_text(aes(y = DO, label = Station)) + 
     geom_line(data = ctd_int, aes(y = DO)) +
-    scale_y_continuous('Distance (km)') + 
+    scale_y_continuous('DO (mg/L)') + 
     geom_point(data = data.frame(ctd_intexc)[-2, ], aes(x = x, y = y), size = 4)
   
   pls[[dt]] <- list(p2, p3)

@@ -231,7 +231,7 @@ shinyServer(function(input, output, session) {
     # day window for depth
     dpwin <- input$dpwin
     dpwin <- dpwin * 60 * 60 * 24/2
-    
+    browser()
     # plot
     plot_adcp(adcp(), adcp_datP, shp_in = pbay, loc_in = c(-87.13208, 30.45682), 
       fixed_y = FALSE, win = dpwin)
@@ -289,6 +289,40 @@ shinyServer(function(input, output, session) {
     plot(met_dat[[3]], by = aggperiod, alpha = errbars, width = 5) +
       ggtitle('P05-S') +
       scale_y_continuous(limits = slider)
+    
+    })
+  
+  
+  ######
+  # DO gradient plots
+  
+  # cumulative distance plot of tidal excursion
+  output$grad_plo1 <- renderPlot({
+  
+    grdwin <- input$grdwin
+    grddt <- input$grddt
+
+    grad_plo(wqm_dat, adcp_datP, ctd_dat, dt_in = grddt, win_in = grdwin, dist_plo = TRUE, stats_out = FALSE)
+    
+    })
+  
+  # DO gradient plot
+  output$grad_plo2 <- renderPlot({
+  
+    grdwin <- input$grdwin
+    grddt <- input$grddt
+
+    grad_plo(wqm_dat, adcp_datP, ctd_dat, dt_in = grddt, win_in = grdwin, dist_plo = FALSE, stats_out = FALSE)
+    
+    })
+  
+  # summary table
+  output$grad_tab <- renderTable({
+  
+    grdwin <- input$grdwin
+    grddt <- input$grddt
+
+    grad_plo(wqm_dat, adcp_datP, ctd_dat, dt_in = grddt, win_in = grdwin, stats_out = TRUE)
     
     })
   
