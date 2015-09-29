@@ -88,13 +88,14 @@ grad_plo <- function(wqm_in, adcp_in, ctd_in, dt_in, win_in = 14, cols = NULL, d
     summarize(cumdist = mean(cumdist, na.rm = T)) %>% 
     na.omit %>% 
     data.frame
-  
+
   # get bottom DO on date, for each station
   ctd <- filter(ctd_in, Date %in% dt_in) %>%
     select(Station, Date, DO, Depth, dist) %>% 
     group_by(Station) %>% 
     filter(Depth == max(Depth)) %>% 
-    ungroup
+    ungroup %>% 
+    data.frame
   
   # interp
   ctd_int <- approx(x = ctd$dist, y = ctd$DO, xout = seq(0, max(ctd$dist), length = 200))
@@ -106,14 +107,14 @@ grad_plo <- function(wqm_in, adcp_in, ctd_in, dt_in, win_in = 14, cols = NULL, d
   
   # get DO interpolations for dist
   ctd_intexc <- approx(x = ctd$dist, y = ctd$DO, xout = dists)
-  
+
   # DO gradient plot
   p_grad <- ggplot(ctd, aes(x = dist)) + 
     theme_bw() +
     geom_ribbon(data = data.frame(x = dists)[1:2, , drop = F], 
-      aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[1], alpha = 0.6) +
+      aes(x = x), ymin = 0, ymax = max(ctd$DO), fill = cols[1], alpha = 0.6) +
     geom_ribbon(data = data.frame(x = dists)[2:3, , drop = F], 
-      aes(x = x, ymin = 0, ymax = max(ctd$DO)), fill = cols[2], alpha = 0.6) +
+      aes(x = x), ymin = 0, ymax = max(ctd$DO), fill = cols[2], alpha = 0.6) +
     geom_text(aes(y = DO, label = Station)) + 
     geom_line(data = ctd_int, aes(y = DO)) +
     scale_y_continuous('DO (mg/L)') + 
@@ -384,11 +385,6 @@ plot_press <- function(dat_in, all_in, win = NULL, fixed_y = TRUE){
   # window defaults to one day
   if(is.null(win))
     win <- 60 * 60 * 24
-  
-  # subset by one bin (depth is repeated for each bin)
-  binsel <- unique(all_in$bin)[1]
-  dat_in <- dat_in[dat_in$bin %in% binsel, ]
-  all_in <- all_in[all_in$bin %in% binsel, ]
   
   # x limits of plot from window
   lims <- with(dat_in, c(datetimestamp - win, datetimestamp + win))
@@ -807,7 +803,7 @@ ctd_plot <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dept
   y.val <- new_grd$Var1
   x.val <- as.numeric(names(new_grd)[-1])
   z.val <- as.matrix(new_grd[order(new_grd$Var1, decreasing = T),-1])
-  
+
   ##
   # start plot
   plot.new()
@@ -876,7 +872,7 @@ ctd_plot <- function(dat_in, var_plo, rngs_in = NULL, num_levs = 8, ylab = 'Dept
       c(poly.x, rev(poly.x)), 
       c(mllw_m, rep(min(mllw_m), length(mllw_m))), 
       col = alpha('grey', 1), 
-      border = NA
+      border = 'black'
       ))
   
   ##

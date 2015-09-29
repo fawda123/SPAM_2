@@ -332,10 +332,18 @@ shinyUI(fluidPage(
           
         ),
       
-      plotOutput("adcpplot", height = "900px", width = "500px")
-            
+      fluidRow(
+          
+          column(width = 3,
+            plotOutput("adcpplot")
+          ),
+        
+          column(width = 3,
+            plotOutput("presplot", height = "150px", width = "500px")
+          )
+      )
+
     ), 
-      
       
   tabPanel("Metabolism",
         

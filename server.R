@@ -13,6 +13,7 @@ source('R/funcs.R')
 
 data(ctd_dat)
 data(wqm_dat)
+data(adcp_dat)
 data(adcp_datP)
 data(met_dat)
 data(pbay)
@@ -110,9 +111,9 @@ shinyServer(function(input, output, session) {
     adcp_hr <- input$hrsel
     tosel <- as.POSIXct(paste(as.character(adcp_dt), adcp_hr), format = '%Y-%m-%d %H', 
       tz = 'America/Regina')
-    absval <- abs(adcp_datP$datetimestamp - tosel)
+    absval <- abs(adcp_dat$datetimestamp - tosel)
     tosel <- absval %in% min(absval)
-    out <- adcp_datP[tosel, ]
+    out <- adcp_dat[tosel, ]
     
     return(out)
     
@@ -226,17 +227,35 @@ shinyServer(function(input, output, session) {
   ######
   # adcp plot
   
-  output$adcpplot <- renderPlot({
+  # pressure sensor
+  output$presplot <- renderPlot({
   
     # day window for depth
     dpwin <- input$dpwin
     dpwin <- dpwin * 60 * 60 * 24/2
-    browser()
-    # plot
-    plot_adcp(adcp(), adcp_datP, shp_in = pbay, loc_in = c(-87.13208, 30.45682), 
-      fixed_y = FALSE, win = dpwin)
-    
+
+    plot_press(adcp(), adcp_dat, win = dpwin, fixed_y = TRUE)
+      
     })
+
+  # combo of aggregated and raw bin data
+  output$adcpplot <- renderPlot({
+ 
+    # prep combined bin and raw bin data
+    toplo <- adcp()[, c('datetimestamp', 'Mag1', 'Dir1', 'Mag2', 'Dir2', 'Mag3', 'Dir3')]
+    adcp_agg <- adcp_datP[adcp_datP$datetimestamp %in% adcp()$datetimestamp, ]
+    toplo$Mag4 <- adcp_agg$Mag # fourth bin is the averaged of the first three
+    toplo$Dir4 <- adcp_agg$Dir
+    toplo$Mag5 <- adcp_agg$MagP # fifth bin is the vector along the principal axis
+    toplo$Dir5 <- adcp_agg$DirP
+
+    # plots of bins 1/3, averaged, and decomp along PC axis for multiple timesteps
+    labs <- c('Bin 1: 2.5m', 'Bin 2: 2 m', 'Bin 3: 1.5 m', 'Averaged', 'PC axis')
+
+    plot_adcpraw(toplo, shp_in = pbay, bins = 1:5, bin_labs = labs,
+      loc_in = c(-87.13208, 30.45682), vec_scl = 2)
+    
+    }, height = 600)
   
   ######
   # metab plots
@@ -321,7 +340,7 @@ shinyServer(function(input, output, session) {
   
     grdwin <- input$grdwin
     grddt <- input$grddt
-
+  
     grad_plo(wqm_dat, adcp_datP, ctd_dat, dt_in = grddt, win_in = grdwin, stats_out = TRUE)
     
     })
