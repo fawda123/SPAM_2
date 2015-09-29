@@ -437,8 +437,9 @@ shinyUI(fluidPage(
       
       ),
     
-    plotOutput("grad_plo1", height = "300px", width = "1000px"),
-    plotOutput("grad_plo2", height = "300px", width = "1000px"), 
+    plotOutput("ctd_grad", height = "275px", width = "820px"), 
+    plotOutput("grad_plo1", height = "225px", width = "800px"),
+    plotOutput("grad_plo2", height = "225px", width = "800px"), 
     tableOutput("grad_tab")
     
   )

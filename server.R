@@ -8,6 +8,7 @@ library(htmltools)
 library(maptools)
 library(SWMPr)
 library(WtRegDO)
+library(CTDplot)
 
 source('R/funcs.R')
 
@@ -314,6 +315,16 @@ shinyServer(function(input, output, session) {
   
   ######
   # DO gradient plots
+  
+  # standard ctd plot for the chosen data
+  output$ctd_grad <- renderPlot({
+    
+    grddt <- as.Date(input$grddt)
+    toplo <- ctd_dat[ctd_dat$Date %in% grddt, ]
+    
+    ctd_plot(toplo, 'DO')
+    
+  })
   
   # cumulative distance plot of tidal excursion
   output$grad_plo1 <- renderPlot({
